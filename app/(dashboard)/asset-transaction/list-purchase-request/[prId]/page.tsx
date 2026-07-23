@@ -38,20 +38,22 @@ function formatSpecifications(
     return "-"
   }
 
-  return specifications
-    .map((specification) => {
-      const name = specification.spec?.name ?? "-"
-      const value = specification.specValue ?? "-"
+  return specifications.map((specification) => {
+    const name = specification.spec?.name ?? "-"
+    const value = specification.specValue ?? "-"
 
-      return `${name}: ${value}`
-    })
-    .join(", ")
+    return (
+      <li key={specification.id}>
+        {name}: {value}
+      </li>
+    )
+  })
 }
 
 function InfoItem({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-md border p-3">
-      <p className="text-muted-foreground text-sm">{label}</p>
+      <p className="text-sm text-muted-foreground">{label}</p>
       <p className="font-medium">{value}</p>
     </div>
   )
@@ -65,14 +67,8 @@ export default async function PrDetailPage({ params }: { params: Params }) {
     <Card>
       <CardHeader className="gap-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <CardTitle className="text-2xl">
-              Purchase Request Detail
-            </CardTitle>
-            <p className="text-muted-foreground text-sm">
-              {formatText(data.description)}
-            </p>
-          </div>
+          <CardTitle className="text-2xl">Purchase Request Detail</CardTitle>
+
           <div className="flex flex-wrap gap-2">
             <Link
               href="/asset-transaction/list-purchase-request"
@@ -80,26 +76,32 @@ export default async function PrDetailPage({ params }: { params: Params }) {
             >
               Back
             </Link>
-            <PurchaseRequestStatusActions
-              id={data.id}
-              status={data.status}
-            />
+            <PurchaseRequestStatusActions id={data.id} status={data.status} />
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-6">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <InfoItem label="PR No" value={data.prNo} />
           <InfoItem label="Date" value={data.date} />
           <InfoItem label="Company" value={data.company?.code ?? "-"} />
           <InfoItem label="Category" value={data.assetCategory?.name ?? "-"} />
-          <InfoItem label="Status" value={data.status} />
+          <InfoItem label="Description" value={data.description ?? "-"} />
           <InfoItem label="Total Qty" value={data.totalQuantity ?? 0} />
           <InfoItem
             label="Total Amount"
             value={formatCurrency(data.totalAmount)}
           />
+          <InfoItem label="Status" value={data.status} />
         </div>
+
+        {data.status === "REJECTED" ? (
+          <div className="rounded-md border p-3">
+            <p className="text-sm text-muted-foreground">Rejection Reason</p>
+            <p className="font-medium">{formatText(data.reason)}</p>
+          </div>
+        ) : null}
 
         <div>
           <h3 className="mb-3 font-semibold">Asset Details</h3>
@@ -121,8 +123,8 @@ export default async function PrDetailPage({ params }: { params: Params }) {
                       <TableCell className="font-medium">
                         {formatAssetCode(detail)}
                       </TableCell>
-                      <TableCell className="max-w-[360px]">
-                        {formatSpecifications(detail.specifications)}
+                      <TableCell className="max-w-90">
+                        <ul>{formatSpecifications(detail.specifications)}</ul>
                       </TableCell>
                       <TableCell className="text-right">
                         {detail.quantity ?? 0}

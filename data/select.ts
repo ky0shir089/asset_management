@@ -1,16 +1,14 @@
-import { createMemoryTracker } from "@/lib/debug/memory"
 import { db } from "@/drizzle/db"
 import { requireUser } from "./require-user"
-import { and, asc, eq, ilike, isNotNull, ne, or, sql } from "drizzle-orm"
+import { and, count, eq, inArray, isNotNull, ne, sql } from "drizzle-orm"
 import {
-  assetCodes,
+  assetDatas,
   assetSpecs,
   branches,
   companies,
-  prSpecifications,
+  outlets,
   purchaseOrders,
   purchaseRequests,
-  roleUser,
 } from "@/drizzle/schema"
 
 export async function moduleOptions() {
@@ -42,10 +40,7 @@ export async function menuOptions() {
         },
       },
     },
-    orderBy: (menus, { asc }) => [
-      asc(menus.createdAt),
-      asc(menus.position),
-    ],
+    orderBy: (menus, { asc }) => [asc(menus.createdAt), asc(menus.position)],
   })
 }
 export type menuOptionsType = Awaited<ReturnType<typeof menuOptions>>[0]
@@ -124,34 +119,6 @@ export type assetCodeOptionType = Awaited<
   ReturnType<typeof assetCodeOptions>
 >[0]
 
-export async function assetCodeSearchOptions(query: string, limit = 20) {
-  await requireUser()
-
-  const search = query.trim()
-
-  if (search.length < 3) {
-    return []
-  }
-
-  return db.query.assetCodes.findMany({
-    columns: {
-      id: true,
-      categoryId: true,
-      code: true,
-      name: true,
-    },
-    where: or(
-      ilike(assetCodes.code, `%${search}%`),
-      ilike(assetCodes.name, `%${search}%`)
-    ),
-    orderBy: (assetCodes, { asc }) => [
-      asc(assetCodes.code),
-      asc(assetCodes.name),
-    ],
-    limit,
-  })
-}
-
 export async function assetSpecOptions() {
   await requireUser()
 
@@ -177,27 +144,7 @@ function isSafeIdentifier(value: string) {
 }
 
 export async function assetSpecValueOptions() {
-  const memory = createMemoryTracker("assetSpecValueOptions")
-  memory.mark("start")
-
   await requireUser()
-  memory.mark("after-auth")
-
-  const savedValues = await db
-    .selectDistinct({
-      specId: prSpecifications.specId,
-      value: prSpecifications.specValue,
-    })
-    .from(prSpecifications)
-    .where(
-      and(
-        isNotNull(prSpecifications.specValue),
-        ne(prSpecifications.specValue, "")
-      )
-    )
-    .orderBy(asc(prSpecifications.specValue))
-
-  memory.mark("saved-values", { savedValues: savedValues.length })
 
   const selectSpecs = await db.query.assetSpecs.findMany({
     where: eq(assetSpecs.type, "SELECT"),
@@ -206,7 +153,6 @@ export async function assetSpecValueOptions() {
       dataTable: true,
     },
   })
-  memory.mark("select-specs", { selectSpecs: selectSpecs.length })
 
   const dataTableValues: { specId: string; value: string }[] = []
 
@@ -221,17 +167,12 @@ export async function assetSpecValueOptions() {
           `select distinct "name" from "public"."${spec.dataTable}" where "name" is not null and "name" <> '' order by "name"`
         )
       )
-      const rows = (result as unknown as { rows?: { name: string }[] }).rows ?? []
+      const rows =
+        (result as unknown as { rows?: { name: string }[] }).rows ?? []
 
       dataTableValues.push(
         ...rows.map((row) => ({ specId: spec.id, value: row.name }))
       )
-      memory.mark("data-table-values", {
-        specId: spec.id,
-        dataTable: spec.dataTable,
-        rows: rows.length,
-        dataTableValues: dataTableValues.length,
-      })
     } catch {
       // Invalid data_table values should not break purchase request forms.
     }
@@ -239,7 +180,7 @@ export async function assetSpecValueOptions() {
 
   const values = new Map<string, { specId: string; value: string }>()
 
-  for (const option of [...savedValues, ...dataTableValues]) {
+  for (const option of [...dataTableValues]) {
     if (!option.value) {
       continue
     }
@@ -250,32 +191,15 @@ export async function assetSpecValueOptions() {
     })
   }
 
-  memory.mark("deduped-values", { values: values.size })
-
   const result = [...values.values()].sort((a, b) =>
     a.value.localeCompare(b.value)
   )
-
-  memory.mark("finish", { result: result.length })
 
   return result
 }
 export type assetSpecValueOptionType = Awaited<
   ReturnType<typeof assetSpecValueOptions>
 >[0]
-
-export async function customerOptions() {
-  await requireUser()
-
-  return db.query.customers.findMany({
-    columns: {
-      id: true,
-      name: true,
-    },
-    orderBy: (customers, { asc }) => [asc(customers.createdAt)],
-  })
-}
-export type customerOptionType = Awaited<ReturnType<typeof customerOptions>>[0]
 
 export async function bankOptions() {
   await requireUser()
@@ -303,56 +227,15 @@ export async function supplierOptions() {
 }
 export type supplierOptionType = Awaited<ReturnType<typeof supplierOptions>>[0]
 
-export async function purchaseRequestOptionsForPurchaseOrder(
-  currentPurchaseOrderId?: string
-) {
-  const user = await requireUser()
+export async function purchaseRequestOptions(id?: string) {
+  await requireUser()
 
-  const userRoles = await db.query.roleUser.findMany({
-    where: and(eq(roleUser.userId, user.id), eq(roleUser.isActive, true)),
-    with: {
-      role: true,
-    },
-  })
-  const isSuperAdmin = userRoles.some(
-    (ur) => ur.role.name === "Super Administrator"
-  )
-
-  const currentPo = currentPurchaseOrderId
-    ? await db.query.purchaseOrders.findFirst({
-        where: eq(purchaseOrders.id, currentPurchaseOrderId),
-        columns: {
-          prId: true,
-          createdBy: true,
-        },
-      })
-    : null
-
-  if (currentPo && !isSuperAdmin && currentPo.createdBy !== user.id) {
-    return []
-  }
-
-  const conditions = [eq(purchaseRequests.status, "APPROVED")]
-  if (!isSuperAdmin) {
-    conditions.push(eq(purchaseRequests.createdBy, user.id))
-  }
-
-  const purchaseRequestWhere = currentPo
-    ? and(
-        or(eq(purchaseRequests.id, currentPo.prId), and(...conditions))!,
-        !isSuperAdmin ? eq(purchaseRequests.createdBy, user.id) : undefined
-      )
-    : and(...conditions)
-
-  return db.query.purchaseRequests.findMany({
-    where: purchaseRequestWhere,
-    columns: {
-      id: true,
-      date: true,
-      description: true,
-      totalQuantity: true,
-      totalAmount: true,
-    },
+  return await db.query.purchaseRequests.findMany({
+    where: and(
+      eq(purchaseRequests.status, "APPROVED"),
+      ne(purchaseRequests.poStatus, "COMPLETED"),
+      id ? eq(purchaseRequests.id, id) : isNotNull(purchaseRequests.id)
+    ),
     with: {
       company: {
         columns: {
@@ -368,24 +251,14 @@ export async function purchaseRequestOptionsForPurchaseOrder(
     orderBy: (purchaseRequests, { desc }) => [desc(purchaseRequests.createdAt)],
   })
 }
-export type purchaseRequestOptionForPurchaseOrderType = Awaited<
-  ReturnType<typeof purchaseRequestOptionsForPurchaseOrder>
+export type purchaseRequestOptionType = Awaited<
+  ReturnType<typeof purchaseRequestOptions>
 >[0]
 
-export async function purchaseRequestDetailOptionsForPurchaseOrder(
+export async function purchaseRequestDetailOptions(
   currentPurchaseOrderId?: string
 ) {
-  const user = await requireUser()
-
-  const userRoles = await db.query.roleUser.findMany({
-    where: and(eq(roleUser.userId, user.id), eq(roleUser.isActive, true)),
-    with: {
-      role: true,
-    },
-  })
-  const isSuperAdmin = userRoles.some(
-    (ur) => ur.role.name === "Super Administrator"
-  )
+  await requireUser()
 
   const currentPo = currentPurchaseOrderId
     ? await db.query.purchaseOrders.findFirst({
@@ -398,7 +271,7 @@ export async function purchaseRequestDetailOptionsForPurchaseOrder(
       })
     : null
 
-  if (currentPo && !isSuperAdmin && currentPo.createdBy !== user.id) {
+  if (currentPo) {
     return []
   }
 
@@ -437,20 +310,20 @@ export async function purchaseRequestDetailOptionsForPurchaseOrder(
         return false
       }
 
-      if (!isSuperAdmin && dtl.purchaseRequest.createdBy !== user.id) {
-        return false
-      }
-
       return true
     })
     .map((dtl) => {
       const orderedQuantity = dtl.purchaseOrderDetails
         .filter(
-          (pod) => !currentPurchaseOrderId || pod.poId !== currentPurchaseOrderId
+          (pod) =>
+            !currentPurchaseOrderId || pod.poId !== currentPurchaseOrderId
         )
         .reduce((sum, pod) => sum + (pod.quantity ?? 0), 0)
 
-      const remainingQuantity = Math.max(0, (dtl.quantity ?? 0) - orderedQuantity)
+      const remainingQuantity = Math.max(
+        0,
+        (dtl.quantity ?? 0) - orderedQuantity
+      )
 
       return {
         id: dtl.id,
@@ -469,6 +342,202 @@ export async function purchaseRequestDetailOptionsForPurchaseOrder(
       }
     })
 }
-export type purchaseRequestDetailOptionForPurchaseOrderType = Awaited<
-  ReturnType<typeof purchaseRequestDetailOptionsForPurchaseOrder>
+export type purchaseRequestDetailOptionType = Awaited<
+  ReturnType<typeof purchaseRequestDetailOptions>
+>[0]
+
+export async function outletOptions() {
+  await requireUser()
+
+  return db.query.outlets.findMany({
+    where: eq(outlets.isActive, true),
+    with: {
+      branch: {
+        columns: {
+          id: true,
+          companyId: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: (outlets, { asc }) => [asc(outlets.name)],
+  })
+}
+export type outletOptionType = Awaited<ReturnType<typeof outletOptions>>[0]
+
+export async function assetLeaseCustomerOptions() {
+  await requireUser()
+
+  return db.query.customers.findMany({
+    columns: {
+      id: true,
+      name: true,
+      outletId: true,
+    },
+    orderBy: (customers, { asc }) => [asc(customers.name)],
+  })
+}
+export type assetLeaseCustomerOptionType = Awaited<
+  ReturnType<typeof assetLeaseCustomerOptions>
+>[0]
+
+export async function assetLeaseAssetOptions() {
+  await requireUser()
+
+  const lsaOutletIds = db
+    .select({ id: outlets.id })
+    .from(outlets)
+    .innerJoin(branches, eq(outlets.branchId, branches.id))
+    .innerJoin(companies, eq(branches.companyId, companies.id))
+    .where(eq(companies.code, "LSA"))
+
+  const rows = await db.query.assetDatas.findMany({
+    columns: {
+      id: true,
+      nomorAssets: true,
+      outletId: true,
+    },
+    where: and(
+      eq(assetDatas.status, "TERSEDIA"),
+      inArray(assetDatas.outletId, lsaOutletIds)
+    ),
+    with: {
+      poDetail: {
+        with: {
+          prDetail: {
+            with: {
+              assetCode: {
+                columns: {
+                  code: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    orderBy: (assetDatas, { asc }) => [asc(assetDatas.nomorAssets)],
+  })
+
+  return rows.map((row) => ({
+    id: row.id,
+    nomorAssets: row.nomorAssets,
+    outletId: row.outletId,
+    assetCode: row.poDetail?.prDetail?.assetCode ?? null,
+  }))
+}
+export type assetLeaseAssetOptionType = Awaited<
+  ReturnType<typeof assetLeaseAssetOptions>
+>[0]
+
+export async function purchaseOrderDetailOptionsForReceivedAsset() {
+  await requireUser()
+
+  const podetails = await db.query.poDetails.findMany({
+    with: {
+      purchaseOrder: {
+        columns: {
+          id: true,
+          poNo: true,
+          date: true,
+          description: true,
+          status: true,
+          createdBy: true,
+        },
+        with: {
+          purchaseRequest: {
+            columns: {
+              id: true,
+              date: true,
+              companyId: true,
+            },
+            with: {
+              company: {
+                columns: {
+                  id: true,
+                  code: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      prDetail: {
+        columns: {
+          id: true,
+          quantity: true,
+          price: true,
+        },
+        with: {
+          assetCode: {
+            columns: {
+              id: true,
+              code: true,
+              name: true,
+            },
+          },
+          specifications: {
+            with: {
+              spec: {
+                columns: {
+                  name: true,
+                },
+              },
+            },
+          },
+          purchaseOrderDetails: {
+            columns: {
+              id: true,
+              quantity: true,
+            },
+          },
+        },
+      },
+    },
+  })
+
+  const receivedCounts = await db
+    .select({
+      poDetailId: assetDatas.poDetailId,
+      count: count(),
+    })
+    .from(assetDatas)
+    .groupBy(assetDatas.poDetailId)
+
+  const receivedCountMap = new Map(
+    receivedCounts.map((r) => [r.poDetailId, r.count])
+  )
+
+  return podetails.map((pod) => {
+    const orderedQuantity = pod.quantity ?? 0
+    const alreadyReceived = receivedCountMap.get(pod.id) ?? 0
+    const remainingQuantity = Math.max(0, orderedQuantity - alreadyReceived)
+
+    return {
+      id: pod.id,
+      poId: pod.poId,
+      poNo: pod.purchaseOrder.poNo,
+      poDate: pod.purchaseOrder.date,
+      poDescription: pod.purchaseOrder.description,
+      poStatus: pod.purchaseOrder.status,
+      createdBy: pod.purchaseOrder.createdBy,
+      company: pod.purchaseOrder.purchaseRequest.company,
+      quantity: orderedQuantity,
+      receivedQuantity: alreadyReceived,
+      remainingQuantity,
+      assetCode: pod.prDetail?.assetCode ?? null,
+      specifications:
+        pod.prDetail?.specifications?.map((s) => ({
+          id: s.id,
+          specId: s.specId,
+          specName: s.spec?.name ?? "",
+          specValue: s.specValue,
+        })) ?? [],
+    }
+  })
+}
+export type purchaseOrderDetailOptionForReceiveType = Awaited<
+  ReturnType<typeof purchaseOrderDetailOptionsForReceivedAsset>
 >[0]

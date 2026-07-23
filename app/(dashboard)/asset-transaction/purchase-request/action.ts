@@ -6,6 +6,7 @@ import {
   assetBrands,
   assetSpecs,
   banks,
+  companies,
   prDetails,
   prSpecifications,
   purchaseRequests,
@@ -16,11 +17,80 @@ import {
   purchaseRequestSchema,
   purchaseRequestSchemaType,
 } from "@/lib/formSchemas/purchase-request-schema"
-import { and, eq, inArray, isNotNull, ne, sql } from "drizzle-orm"
-import { revalidatePath } from "next/cache"
+import { and, desc, eq, ilike, inArray, isNotNull, ne, sql } from "drizzle-orm"
 
 function isSafeIdentifier(value: string) {
   return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)
+}
+
+function getPurchaseRequestPeriod(date: string | Date) {
+  if (date instanceof Date) {
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+
+    return {
+      year,
+      yearText: String(year).slice(-2),
+      month,
+      monthText: String(month).padStart(2, "0"),
+    }
+  }
+
+  const [yearText, monthText] = date.split("-")
+  const year = Number(yearText)
+  const month = Number(monthText)
+
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    yearText.length !== 4 ||
+    month < 1 ||
+    month > 12
+  ) {
+    throw new Error("Invalid purchase request date")
+  }
+
+  return {
+    year,
+    yearText: yearText.slice(-2),
+    month,
+    monthText: String(month).padStart(2, "0"),
+  }
+}
+
+async function generatePurchaseRequestNumber(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  input: {
+    companyId: string
+    date: string | Date
+  }
+) {
+  const [company] = await tx
+    .select({ code: companies.code })
+    .from(companies)
+    .where(eq(companies.id, input.companyId))
+    .for("update")
+
+  if (!company?.code?.trim()) {
+    throw new Error("Company not found")
+  }
+
+  const { yearText, monthText } = getPurchaseRequestPeriod(input.date)
+  const prefix = `PR/${company.code.trim()}/${yearText}/${monthText}/`
+
+  const [last] = await tx
+    .select({
+      prNo: purchaseRequests.prNo,
+    })
+    .from(purchaseRequests)
+    .where(
+      ilike(purchaseRequests.prNo, `${prefix}%`),
+    )
+    .orderBy(desc(purchaseRequests.createdAt))
+
+  const sequence = String((last?.prNo ? parseInt(last.prNo.split("/").pop() || "0") : 0) + 1).padStart(3, "0")
+
+  return `${prefix}${sequence}`
 }
 
 async function getAllowedSelectValues(spec: {
@@ -205,75 +275,6 @@ async function validateDetailSpecifications(
   return { success: true, newSpecValuesToInsert }
 }
 
-type PurchaseRequestDecisionStatus = "APPROVED" | "REJECTED"
-
-async function updatePurchaseRequestStatus(
-  id: string,
-  status: PurchaseRequestDecisionStatus
-) {
-  const user = await requireUser()
-
-  try {
-    const permission = await authorizeAction("purchase-request:update")
-
-    if (!permission.authorized) {
-      return permission.response
-    }
-
-    const existing = await db.query.purchaseRequests.findFirst({
-      where: eq(purchaseRequests.id, id),
-      columns: { id: true, status: true },
-    })
-
-    if (!existing) {
-      return {
-        success: false,
-        message: "Purchase request not found",
-      }
-    }
-
-    if (existing.status !== "REQUEST") {
-      return {
-        success: false,
-        message:
-          "Only purchase requests with status 'REQUEST' can be approved or rejected.",
-      }
-    }
-
-    await db
-      .update(purchaseRequests)
-      .set({
-        status,
-        updatedBy: user.id,
-      })
-      .where(eq(purchaseRequests.id, id))
-
-    revalidatePath("/asset-transaction/list-purchase-request")
-    revalidatePath(`/asset-transaction/list-purchase-request/${id}`)
-
-    return {
-      success: true,
-      message:
-        status === "APPROVED"
-          ? "Purchase request approved successfully"
-          : "Purchase request rejected successfully",
-    }
-  } catch (error) {
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : "Something went wrong",
-    }
-  }
-}
-
-export async function purchaseRequestApprove(id: string) {
-  return updatePurchaseRequestStatus(id, "APPROVED")
-}
-
-export async function purchaseRequestReject(id: string) {
-  return updatePurchaseRequestStatus(id, "REJECTED")
-}
-
 export async function purchaseRequestStore(values: purchaseRequestSchemaType) {
   const user = await requireUser()
 
@@ -314,10 +315,16 @@ export async function purchaseRequestStore(values: purchaseRequestSchemaType) {
         user.id
       )
 
+      const prNo = await generatePurchaseRequestNumber(tx, {
+        companyId: header.companyId,
+        date: header.date,
+      })
+
       const [pr] = await tx
         .insert(purchaseRequests)
         .values({
           date: header.date,
+          prNo,
           companyId: header.companyId,
           assetCategoryId: header.assetCategoryId,
           description: header.description || null,
@@ -362,6 +369,7 @@ export async function purchaseRequestStore(values: purchaseRequestSchemaType) {
       message: "Purchase request created successfully",
     }
   } catch (error) {
+    console.log(error)
     return {
       success: false,
       message: error instanceof Error ? error.message : "Something went wrong",

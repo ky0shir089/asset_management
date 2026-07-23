@@ -8,30 +8,89 @@ import {
   purchaseRequests,
   prDetails,
   suppliers,
-  roleUser,
+  companies,
 } from "@/drizzle/schema"
 import { authorizeAction } from "@/lib/auth/permission"
+import { isSuperAdmin } from "@/lib/auth/permission-query"
 import {
   purchaseOrderSchema,
   purchaseOrderSchemaType,
 } from "@/lib/formSchemas/purchase-order-schema"
-import { and, eq, inArray } from "drizzle-orm"
+import { desc, eq, ilike, inArray, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 
-async function isSuperAdmin(userId: string) {
-  const userRoles = await db.query.roleUser.findMany({
-    where: and(eq(roleUser.userId, userId), eq(roleUser.isActive, true)),
-    with: {
-      role: true,
-    },
-  })
+function getPurchaseOrderPeriod(date: string | Date) {
+  if (date instanceof Date) {
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
 
-  return userRoles.some((ur) => ur.role.name === "Super Administrator")
+    return {
+      year,
+      yearText: String(year).slice(-2),
+      month,
+      monthText: String(month).padStart(2, "0"),
+    }
+  }
+
+  const [yearText, monthText] = date.split("-")
+  const year = Number(yearText)
+  const month = Number(monthText)
+
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    yearText.length !== 4 ||
+    month < 1 ||
+    month > 12
+  ) {
+    throw new Error("Invalid purchase order date")
+  }
+
+  return {
+    year,
+    yearText: yearText.slice(-2),
+    month,
+    monthText: String(month).padStart(2, "0"),
+  }
+}
+
+async function generatePurchaseOrderNumber(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  input: {
+    prId: string
+    date: string | Date
+  }
+) {
+  const [pr] = await tx
+    .select({ companyCode: companies.code })
+    .from(purchaseRequests)
+    .innerJoin(companies, eq(companies.id, purchaseRequests.companyId))
+    .where(eq(purchaseRequests.id, input.prId))
+
+  if (!pr?.companyCode?.trim()) {
+    throw new Error("Purchase request company not found")
+  }
+
+  const { yearText, monthText } = getPurchaseOrderPeriod(input.date)
+  const prefix = `PO/${pr.companyCode.trim()}/${yearText}/${monthText}/`
+
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${prefix}))`)
+
+  const [last] = await tx
+    .select({
+      poNo: purchaseOrders.poNo,
+    })
+    .from(purchaseOrders)
+    .where(ilike(purchaseOrders.poNo, `${prefix}%`))
+    .orderBy(desc(purchaseOrders.createdAt))
+
+   const sequence = String((last?.poNo ? parseInt(last.poNo.split("/").pop() || "0") : 0) + 1).padStart(3, "0")
+
+  return `${prefix}${sequence}`
 }
 
 async function validatePurchaseOrderPayload(
   values: purchaseOrderSchemaType,
-  userId: string,
   excludePoId?: string
 ) {
   // 1. Verify PR status
@@ -51,12 +110,6 @@ async function validatePurchaseOrderPayload(
     }
   }
 
-  // Ownership check for non-superadmin
-  const superAdmin = await isSuperAdmin(userId)
-  if (!superAdmin && pr.createdBy !== userId) {
-    return { success: false, message: "You do not own the selected purchase request" }
-  }
-
   // 2. Verify Supplier exists
   const supplier = await db.query.suppliers.findFirst({
     where: eq(suppliers.id, values.supplierId),
@@ -70,7 +123,10 @@ async function validatePurchaseOrderPayload(
   // 3. Verify detail uniqueness
   const prDtlIds = values.details.map((d) => d.prDtlId)
   if (new Set(prDtlIds).size !== prDtlIds.length) {
-    return { success: false, message: "Duplicate purchase request lines are not allowed" }
+    return {
+      success: false,
+      message: "Duplicate purchase request lines are not allowed",
+    }
   }
 
   // 4. Verify detail lines belong to the selected PR
@@ -84,7 +140,10 @@ async function validatePurchaseOrderPayload(
   for (const detail of values.details) {
     const prDtl = actualPrDetailsMap.get(detail.prDtlId)
     if (!prDtl || prDtl.prId !== values.prId) {
-      return { success: false, message: "Selected item does not belong to the purchase request" }
+      return {
+        success: false,
+        message: "Selected item does not belong to the purchase request",
+      }
     }
   }
 
@@ -146,25 +205,51 @@ export async function purchaseOrderStore(values: purchaseOrderSchemaType) {
       }
     }
 
-    const payloadValidation = await validatePurchaseOrderPayload(validation.data, user.id)
+    const payloadValidation = await validatePurchaseOrderPayload(
+      validation.data
+    )
 
     if (!payloadValidation.success) {
       return payloadValidation
     }
 
     await db.transaction(async (tx) => {
+      const poNo = await generatePurchaseOrderNumber(tx, {
+        prId: validation.data.prId,
+        date: validation.data.date,
+      })
+
       const [po] = await tx
         .insert(purchaseOrders)
         .values({
           date: validation.data.date,
+          poNo,
           prId: validation.data.prId,
           supplierId: validation.data.supplierId,
           description: validation.data.description,
           shippingCost: validation.data.shippingCost,
-          status: "REQUEST",
           createdBy: user.id,
         })
         .returning()
+
+      await tx
+        .update(purchaseOrders)
+        .set({
+          totalQuantity: validation.data.details.reduce(
+            (sum, d) => sum + d.quantity,
+            0
+          ),
+          totalAmount: validation.data.details.reduce(
+            (sum, d) => sum + d.quantity * d.price,
+            0
+          ),
+          totalCost:
+            validation.data.details.reduce(
+              (sum, d) => sum + d.quantity * d.price,
+              0
+            ) + (validation.data.shippingCost ?? 0),
+        })
+        .where(eq(purchaseOrders.id, po.id))
 
       for (const d of validation.data.details) {
         await tx.insert(poDetails).values({
@@ -178,13 +263,12 @@ export async function purchaseOrderStore(values: purchaseOrderSchemaType) {
       }
     })
 
-    revalidatePath("/asset/purchase-order")
-
     return {
       success: true,
       message: "Purchase order created successfully",
     }
   } catch (error) {
+    console.log(error)
     return {
       success: false,
       message: error instanceof Error ? error.message : "Something went wrong",
@@ -192,7 +276,10 @@ export async function purchaseOrderStore(values: purchaseOrderSchemaType) {
   }
 }
 
-export async function purchaseOrderUpdate(id: string, values: purchaseOrderSchemaType) {
+export async function purchaseOrderUpdate(
+  id: string,
+  values: purchaseOrderSchemaType
+) {
   const user = await requireUser()
 
   try {
@@ -246,10 +333,35 @@ export async function purchaseOrderUpdate(id: string, values: purchaseOrderSchem
       }
     }
 
-    const payloadValidation = await validatePurchaseOrderPayload(validation.data, user.id, id)
+    const payloadValidation = await validatePurchaseOrderPayload(
+      validation.data,
+      id
+    )
 
     if (!payloadValidation.success) {
       return payloadValidation
+    }
+
+    // Prevent editing PO if any detail has been received
+    const existingPoDetails = await db.query.poDetails.findMany({
+      where: eq(poDetails.poId, id),
+      columns: { id: true },
+      with: {
+        receivedAssets: {
+          columns: { id: true },
+          limit: 1,
+        },
+      },
+    })
+
+    const hasReceived = existingPoDetails.some(
+      (d) => d.receivedAssets && d.receivedAssets.length > 0
+    )
+    if (hasReceived) {
+      return {
+        success: false,
+        message: "Cannot edit purchase order after assets have been received.",
+      }
     }
 
     await db.transaction(async (tx) => {
@@ -278,7 +390,7 @@ export async function purchaseOrderUpdate(id: string, values: purchaseOrderSchem
       }
     })
 
-    revalidatePath("/asset/purchase-order")
+    revalidatePath("/asset-transaction/purchase-order")
 
     return {
       success: true,

@@ -1,15 +1,11 @@
 import { DataTable } from "@/components/ui/data-table"
-import { purchaseRequestIndex } from "@/data/purchase-request"
+import { inboxPurchaseRequest } from "@/data/purchase-request"
 import { columns } from "./column"
 import { Suspense } from "react"
 import { DataTableSkeleton } from "@/components/data-table-skeleton"
 import SearchBox from "@/components/search-box"
 
-type SearchParamValue = string | string[] | undefined
-
-function getSearchParam(value: SearchParamValue) {
-  return Array.isArray(value) ? value[0] : value
-}
+import { getSearchParam, type SearchParamValue } from "@/lib/helper"
 
 const RenderTable = async ({
   currentPage,
@@ -20,7 +16,7 @@ const RenderTable = async ({
   size: number
   query?: string
 }) => {
-  const result = await purchaseRequestIndex(currentPage, size, query)
+  const result = await inboxPurchaseRequest(currentPage, size, query)
 
   const { data, meta } = result
 

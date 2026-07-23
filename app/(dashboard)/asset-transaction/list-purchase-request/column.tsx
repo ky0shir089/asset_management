@@ -8,6 +8,10 @@ import Link from "next/link"
 
 export const columns: ColumnDef<purchaseRequestIndexType>[] = [
   {
+    header: "PR No",
+    accessorKey: "prNo",
+  },
+  {
     header: "Date",
     accessorKey: "date",
   },

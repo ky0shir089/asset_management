@@ -6,13 +6,11 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { Eye } from "lucide-react"
 import Link from "next/link"
 
-const createdAtFormatter = new Intl.DateTimeFormat("id-ID", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "Asia/Jakarta",
-})
-
 export const columns: ColumnDef<assetLeaseIndexType>[] = [
+  {
+    header: "Rent Date",
+    accessorKey: "rentDate",
+  },
   {
     header: "Rent No",
     accessorKey: "rentNo",
@@ -27,11 +25,6 @@ export const columns: ColumnDef<assetLeaseIndexType>[] = [
     cell: ({ row }) => row.original.note ?? "-",
   },
   { header: "Status", accessorKey: "status" },
-  {
-    header: "Created At",
-    accessorKey: "createdAt",
-    cell: ({ row }) => createdAtFormatter.format(row.original.createdAt),
-  },
   {
     header: "Action",
     cell: ({ row }) => (

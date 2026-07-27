@@ -73,7 +73,7 @@ export async function assetLeaseShow(rentId: string) {
         columns: { id: true, name: true },
       },
       details: {
-        orderBy: (details, { asc }) => [asc(details.position), asc(details.id)],
+        orderBy: (details, { asc }) => [asc(details.id)],
         with: {
           customer: {
             columns: { id: true, name: true },

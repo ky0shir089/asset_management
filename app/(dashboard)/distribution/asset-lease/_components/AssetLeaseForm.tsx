@@ -53,8 +53,6 @@ function blankDetail() {
   return {
     assetId: "",
     customerId: "",
-    dateStart: jakartaToday(),
-    dateEnd: "",
     amount: 0,
   }
 }
@@ -70,6 +68,7 @@ export default function AssetLeaseForm({
     resolver: zodResolver(assetLeaseSchema),
     defaultValues: {
       outletId: "",
+      dateStart: jakartaToday(),
       note: "",
       details: [blankDetail()],
     },
@@ -130,7 +129,28 @@ export default function AssetLeaseForm({
 
   function onSubmit(values: assetLeaseSchemaType) {
     startTransition(async () => {
-      const result = await assetLeaseStore(values)
+      const formData = new FormData()
+      formData.set("outletId", values.outletId)
+      formData.set("dateStart", values.dateStart)
+      if (values.note) formData.set("note", values.note)
+
+      const details = values.details.map((detail) => ({
+        assetId: detail.assetId,
+        customerId: detail.customerId,
+        amount: detail.amount,
+      }))
+      formData.set("details", JSON.stringify(details))
+
+      values.details.forEach((detail, index) => {
+        const files = detail.photos as FileList | undefined
+        if (files) {
+          for (const file of Array.from(files)) {
+            formData.append(`photos-${index}`, file)
+          }
+        }
+      })
+
+      const result = await assetLeaseStore(formData)
 
       if (result.success) {
         toast.success(result.message)
@@ -150,7 +170,7 @@ export default function AssetLeaseForm({
       <div className="rounded-lg border p-4">
         <h2 className="mb-4 font-semibold">Lease Info</h2>
         <FieldGroup>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             <Controller
               name="outletId"
               control={form.control}
@@ -169,6 +189,26 @@ export default function AssetLeaseForm({
                     disabled={!outletItems.length}
                     required
                     aria-invalid={fieldState.invalid}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+
+            <Controller
+              name="dateStart"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name}>Rent Date</FieldLabel>
+                  <Input
+                    {...field}
+                    id={field.name}
+                    type="date"
+                    aria-invalid={fieldState.invalid}
+                    required
                   />
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />

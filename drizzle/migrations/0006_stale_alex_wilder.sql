@@ -1,0 +1,1 @@
+ALTER TABLE "asset_specs" RENAME COLUMN "create_able" TO "createable";

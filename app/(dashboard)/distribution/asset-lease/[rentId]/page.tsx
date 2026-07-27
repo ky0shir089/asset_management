@@ -12,24 +12,6 @@ import { assetLeaseShow } from "@/data/asset-lease"
 import Link from "next/link"
 
 type Params = Promise<{ rentId: string }>
-type AssetLease = Awaited<ReturnType<typeof assetLeaseShow>>
-type AssetLeaseDetail = AssetLease["details"][number]
-
-const createdAtFormatter = new Intl.DateTimeFormat("id-ID", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "Asia/Jakarta",
-})
-
-function formatAsset(detail: AssetLeaseDetail) {
-  const assetCode = detail.asset?.poDetail?.prDetail?.assetCode
-
-  return (
-    [detail.asset?.nomorAssets, assetCode?.code, assetCode?.name]
-      .filter(Boolean)
-      .join(" - ") || "-"
-  )
-}
 
 function InfoItem({ label, value }: { label: string; value: string }) {
   return (
@@ -68,13 +50,10 @@ export default async function AssetLeaseDetailPage({
       <CardContent className="space-y-6">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <InfoItem label="Rent No" value={data.rentNo} />
+          <InfoItem label="Rend Date" value={data.rentDate} />
           <InfoItem label="Outlet" value={data.outlet?.name ?? "-"} />
           <InfoItem label="Note" value={data.note ?? "-"} />
           <InfoItem label="Status" value={data.status} />
-          <InfoItem
-            label="Created At"
-            value={createdAtFormatter.format(data.createdAt)}
-          />
         </div>
 
         <section>
@@ -83,10 +62,9 @@ export default async function AssetLeaseDetailPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Asset</TableHead>
+                  <TableHead>Asset No</TableHead>
+                  <TableHead>Asset Name</TableHead>
                   <TableHead>Customer</TableHead>
-                  <TableHead>Date Start</TableHead>
-                  <TableHead>Date End</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                 </TableRow>
               </TableHeader>
@@ -95,11 +73,12 @@ export default async function AssetLeaseDetailPage({
                   data.details.map((detail) => (
                     <TableRow key={detail.id}>
                       <TableCell className="font-medium">
-                        {formatAsset(detail)}
+                        {detail.asset?.nomorAssets}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {detail.asset?.poDetail?.prDetail?.assetCode?.name}
                       </TableCell>
                       <TableCell>{detail.customer?.name ?? "-"}</TableCell>
-                      <TableCell>{detail.dateStart}</TableCell>
-                      <TableCell>{detail.dateEnd ?? "-"}</TableCell>
                       <TableCell className="text-right">
                         {(detail.amount ?? 0).toLocaleString("id-ID")}
                       </TableCell>

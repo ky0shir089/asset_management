@@ -34,3 +34,9 @@ pnpm-debug.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local Claude Code state
+/.claude/
+
+# runtime uploads
+/public/uploads/

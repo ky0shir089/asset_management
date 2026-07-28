@@ -2,29 +2,28 @@
 
 import { buttonVariants } from "@/components/ui/button"
 import type { assetLeaseIndexType } from "@/data/asset-lease"
+import AssetLeaseStatusBadge from "./_components/AssetLeaseStatusBadge"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Eye } from "lucide-react"
 import Link from "next/link"
 
 export const columns: ColumnDef<assetLeaseIndexType>[] = [
+  { header: "Lease Date", accessorKey: "rentDate" },
+  { header: "Lease No", accessorKey: "rentNo" },
   {
-    header: "Rent Date",
-    accessorKey: "rentDate",
+    header: "Company",
+    accessorFn: (row) => row.company?.name ?? "-",
   },
   {
-    header: "Rent No",
-    accessorKey: "rentNo",
+    header: "Receive Date",
+    accessorKey: "receiveDate",
+    cell: ({ row }) => row.original.receiveDate ?? "-",
   },
   {
-    header: "Outlet",
-    accessorFn: (row) => row.outlet?.name ?? "-",
+    header: "Status",
+    accessorKey: "status",
+    cell: ({ row }) => <AssetLeaseStatusBadge status={row.original.status} />,
   },
-  {
-    header: "Note",
-    accessorKey: "note",
-    cell: ({ row }) => row.original.note ?? "-",
-  },
-  { header: "Status", accessorKey: "status" },
   {
     header: "Action",
     cell: ({ row }) => (

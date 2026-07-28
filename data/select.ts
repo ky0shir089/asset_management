@@ -365,20 +365,21 @@ export async function outletOptions() {
 }
 export type outletOptionType = Awaited<ReturnType<typeof outletOptions>>[0]
 
-export async function assetLeaseCustomerOptions() {
+export async function assetLeaseCompanyOptions() {
   await requireUser()
 
-  return db.query.customers.findMany({
+  return db.query.companies.findMany({
     columns: {
       id: true,
+      code: true,
       name: true,
-      outletId: true,
     },
-    orderBy: (customers, { asc }) => [asc(customers.name)],
+    where: and(eq(companies.isActive, true), ne(companies.code, "LSA")),
+    orderBy: (companies, { asc }) => [asc(companies.name)],
   })
 }
-export type assetLeaseCustomerOptionType = Awaited<
-  ReturnType<typeof assetLeaseCustomerOptions>
+export type assetLeaseCompanyOptionType = Awaited<
+  ReturnType<typeof assetLeaseCompanyOptions>
 >[0]
 
 export async function assetLeaseAssetOptions() {

@@ -11,8 +11,7 @@ import {
 } from "drizzle-orm/pg-core"
 import { users } from "./auth-schema"
 import { assetDatas } from "./asset-transaction"
-import { customers } from "./master-asset"
-import { outlets } from "./network"
+import { companies, outlets } from "./network"
 
 export const rentAssets = pgTable(
   "rent_assets",
@@ -20,11 +19,13 @@ export const rentAssets = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     rentNo: varchar("rent_no", { length: 255 }).notNull(),
     rentDate: date("rent_date").notNull(),
-    outletId: uuid("outlet_id")
+    receiveDate: date("receive_date"),
+    companyId: uuid("company_id")
       .notNull()
-      .references(() => outlets.id, { onDelete: "cascade" }),
+      .references(() => companies.id, { onDelete: "cascade" }),
     note: varchar("note", { length: 255 }),
     status: varchar("status", { length: 255 }).notNull().default("NEW"),
+    reason: varchar("reason", { length: 255 }),
     createdBy: text("created_by")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -45,9 +46,6 @@ export const rentAssetDetails = pgTable("rent_asset_details", {
   assetId: uuid("asset_id")
     .notNull()
     .references(() => assetDatas.id, { onDelete: "cascade" }),
-  customerId: uuid("customer_id")
-    .notNull()
-    .references(() => customers.id, { onDelete: "cascade" }),
   dateStart: date("date_start").notNull(),
   dateEnd: date("date_end"),
   amount: integer("amount").notNull().default(0),
@@ -101,16 +99,16 @@ export const assetTransfers = pgTable("asset_transfers", {
 })
 
 export const rentAssetsRelations = relations(rentAssets, ({ one, many }) => ({
-  outlet: one(outlets, {
-    fields: [rentAssets.outletId],
-    references: [outlets.id],
+  company: one(companies, {
+    fields: [rentAssets.companyId],
+    references: [companies.id],
   }),
   details: many(rentAssetDetails),
 }))
 
 export const rentAssetDetailsRelations = relations(
   rentAssetDetails,
-  ({ one }) => ({
+  ({ one, many }) => ({
     rentAsset: one(rentAssets, {
       fields: [rentAssetDetails.rentAssetId],
       references: [rentAssets.id],
@@ -119,9 +117,16 @@ export const rentAssetDetailsRelations = relations(
       fields: [rentAssetDetails.assetId],
       references: [assetDatas.id],
     }),
-    customer: one(customers, {
-      fields: [rentAssetDetails.customerId],
-      references: [customers.id],
+    photos: many(rentPhotoAssets),
+  })
+)
+
+export const rentPhotoAssetsRelations = relations(
+  rentPhotoAssets,
+  ({ one }) => ({
+    detail: one(rentAssetDetails, {
+      fields: [rentPhotoAssets.rentDtlId],
+      references: [rentAssetDetails.id],
     }),
   })
 )

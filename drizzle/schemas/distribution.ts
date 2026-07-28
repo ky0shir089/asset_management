@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm"
 import {
   date,
+  index,
   integer,
   pgTable,
   text,
@@ -35,7 +36,10 @@ export const rentAssets = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
   },
-  (table) => [uniqueIndex("rent_assets_rent_no_unique").on(table.rentNo)]
+  (table) => [
+    uniqueIndex("rent_assets_rent_no_unique").on(table.rentNo),
+    index("rent_assets_company_id_idx").on(table.companyId),
+  ]
 )
 
 export const rentAssetDetails = pgTable("rent_asset_details", {

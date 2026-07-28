@@ -1,5 +1,5 @@
 {
-  "id": "41fdf989-3f60-40fd-93de-6b9f6e894a8d",
+  "id": "417c70b6-9309-49bb-96ae-c0bb3de9dcf0",
   "prevId": "cd333fd0-b592-4cd1-a289-6c867cdc7e71",
   "version": "7",
   "dialect": "postgresql",
@@ -3689,6 +3689,21 @@
             }
           ],
           "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "rent_assets_company_id_idx": {
+          "name": "rent_assets_company_id_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}

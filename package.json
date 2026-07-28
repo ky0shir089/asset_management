@@ -14,7 +14,7 @@
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
     "auth:generate": "npx @better-auth/cli@latest generate --config ./lib/auth/auth.ts --output ./drizzle/schemas/auth-schema.ts --yes",
-    "lint": "eslint",
+    "lint": "eslint --ignore-pattern \".claude/**\"",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit"
   },

@@ -1,5 +1,7 @@
 ALTER TABLE "rent_assets" ADD COLUMN "company_id" uuid;
 --> statement-breakpoint
+ALTER TABLE "rent_assets" ADD COLUMN "receive_date" date;
+--> statement-breakpoint
 UPDATE "rent_assets" AS "rent"
 SET "company_id" = "branch"."company_id"
 FROM "outlets" AS "outlet"
@@ -13,3 +15,9 @@ BEGIN
   END IF;
 END
 $$;
+--> statement-breakpoint
+UPDATE "rent_assets"
+SET
+  "status" = 'APPROVED',
+  "receive_date" = "rent_date"
+WHERE "status" = 'NEW';

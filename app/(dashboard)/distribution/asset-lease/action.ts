@@ -4,30 +4,27 @@ import { requireUser } from "@/data/require-user"
 import { db } from "@/drizzle/db"
 import {
   assetDatas,
-  assetTransfers,
   branches,
   companies,
-  customers,
   outlets,
   rentAssetDetails,
   rentAssets,
   rentPhotoAssets,
 } from "@/drizzle/schema"
 import { authorizeAction } from "@/lib/auth/permission"
-import { assetLeaseSchema } from "@/lib/formSchemas/asset-lease-schema"
+import {
+  assetLeaseApproveSchema,
+  assetLeaseRejectSchema,
+  assetLeaseSchema,
+} from "@/lib/formSchemas/asset-lease-schema"
 import {
   cleanupRentFiles,
-  MAX_PHOTO_FILE_COUNT,
-  MAX_PHOTO_FILE_SIZE_BYTES,
-  MAX_PHOTO_FILE_SIZE_MB,
-  MAX_PHOTO_UPLOAD_SIZE_BYTES,
   saveRentPhotos,
   type SavedPhoto,
 } from "@/lib/local-upload"
-import { and, desc, eq, ilike, inArray, sql } from "drizzle-orm"
+import { and, desc, eq, ilike, inArray, ne, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
-
-const ALLOWED_PHOTO_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"]
+import z from "zod"
 
 async function generateRentNumber(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
@@ -67,47 +64,11 @@ async function generateRentNumber(
 }
 
 function collectPhotoGroups(formData: FormData, detailCount: number): File[][] {
-  const photoGroups: File[][] = []
-  let fileCount = 0
-  let totalBytes = 0
-
-  for (let index = 0; index < detailCount; index++) {
-    const files = formData
+  return Array.from({ length: detailCount }, (_, index) =>
+    formData
       .getAll(`photos-${index}`)
       .filter((entry): entry is File => entry instanceof File && entry.size > 0)
-
-    if (files.length === 0) {
-      throw new Error("Photos are required for each detail item")
-    }
-
-    for (const file of files) {
-      if (!ALLOWED_PHOTO_MIME_TYPES.includes(file.type)) {
-        throw new Error(
-          `Invalid file type "${file.type}". Allowed: image/jpeg, image/png, image/webp`
-        )
-      }
-      if (file.size > MAX_PHOTO_FILE_SIZE_BYTES) {
-        throw new Error(
-          `File "${file.name}" exceeds ${MAX_PHOTO_FILE_SIZE_MB} MB limit`
-        )
-      }
-    }
-
-    fileCount += files.length
-    totalBytes += files.reduce((total, file) => total + file.size, 0)
-    photoGroups.push(files)
-  }
-
-  if (fileCount > MAX_PHOTO_FILE_COUNT) {
-    throw new Error(`Upload at most ${MAX_PHOTO_FILE_COUNT} photos`)
-  }
-  if (totalBytes > MAX_PHOTO_UPLOAD_SIZE_BYTES) {
-    throw new Error(
-      `Total photo size exceeds ${MAX_PHOTO_UPLOAD_SIZE_BYTES / 1024 / 1024} MB limit`
-    )
-  }
-
-  return photoGroups
+  )
 }
 
 type PreparedRentDetail = {
@@ -132,14 +93,20 @@ export async function assetLeaseStore(formData: FormData) {
       return { success: false, message: "Invalid form data" }
     }
 
-    const raw = {
-      outletId: formData.get("outletId"),
-      dateStart: formData.get("dateStart"),
-      note: formData.get("note") || undefined,
-      details,
+    if (!Array.isArray(details) || details.length < 1 || details.length > 10) {
+      return { success: false, message: "Add between 1 and 10 assets" }
     }
 
-    const validation = assetLeaseSchema.safeParse(raw)
+    const photoGroups = collectPhotoGroups(formData, details.length)
+    const validation = assetLeaseSchema.safeParse({
+      companyId: formData.get("companyId"),
+      dateStart: formData.get("dateStart"),
+      note: formData.get("note") || undefined,
+      details: details.map((detail, index) => ({
+        ...(typeof detail === "object" && detail !== null ? detail : {}),
+        photos: photoGroups[index],
+      })),
+    })
 
     if (!validation.success) {
       return {
@@ -149,17 +116,6 @@ export async function assetLeaseStore(formData: FormData) {
     }
 
     const data = validation.data
-
-    let photoGroups: File[][]
-    try {
-      photoGroups = collectPhotoGroups(formData, data.details.length)
-    } catch (err) {
-      return {
-        success: false,
-        message: err instanceof Error ? err.message : "Invalid photo upload",
-      }
-    }
-
     const preparedDetails: PreparedRentDetail[] = []
 
     try {
@@ -170,31 +126,20 @@ export async function assetLeaseStore(formData: FormData) {
       }
 
       await db.transaction(async (tx) => {
-        const [outlet] = await tx
-          .select({ id: outlets.id })
-          .from(outlets)
-          .where(and(eq(outlets.id, data.outletId), eq(outlets.isActive, true)))
+        const [company] = await tx
+          .select({ id: companies.id })
+          .from(companies)
+          .where(
+            and(
+              eq(companies.id, data.companyId),
+              eq(companies.isActive, true),
+              ne(companies.code, "LSA")
+            )
+          )
           .limit(1)
 
-        if (!outlet) {
-          throw new Error("Outlet not found or inactive")
-        }
-
-        const customerIds = [
-          ...new Set(data.details.map((detail) => detail.customerId)),
-        ]
-        const selectedCustomers = await tx
-          .select({ id: customers.id, outletId: customers.outletId })
-          .from(customers)
-          .where(inArray(customers.id, customerIds))
-
-        if (
-          selectedCustomers.length !== customerIds.length ||
-          selectedCustomers.some(
-            (customer) => customer.outletId !== data.outletId
-          )
-        ) {
-          throw new Error("Every customer must belong to selected outlet")
+        if (!company) {
+          throw new Error("Company not found or unavailable")
         }
 
         const assetIds = [
@@ -207,9 +152,9 @@ export async function assetLeaseStore(formData: FormData) {
           .innerJoin(companies, eq(branches.companyId, companies.id))
           .where(eq(companies.code, "LSA"))
 
-        const claimedAssets = await tx
-          .update(assetDatas)
-          .set({ status: "DISEWA", updatedBy: user.id })
+        const eligibleAssets = await tx
+          .select({ id: assetDatas.id })
+          .from(assetDatas)
           .where(
             and(
               inArray(assetDatas.id, assetIds),
@@ -217,34 +162,17 @@ export async function assetLeaseStore(formData: FormData) {
               inArray(assetDatas.outletId, lsaOutletIds)
             )
           )
-          .returning({ id: assetDatas.id })
 
-        if (claimedAssets.length !== assetIds.length) {
+        if (eligibleAssets.length !== assetIds.length) {
           throw new Error("One or more selected assets are no longer available")
         }
 
-        await tx
-          .update(assetDatas)
-          .set({ outletId: data.outletId, updatedBy: user.id })
-          .where(inArray(assetDatas.id, assetIds))
-
-        await tx.insert(assetTransfers).values(
-          assetIds.map((assetId) => ({
-            transferDate: data.dateStart,
-            assetId,
-            outletId: data.outletId,
-            userId: user.id,
-            createdBy: user.id,
-          }))
-        )
-
-        const rentNo = await generateRentNumber(tx)
         const [rentAsset] = await tx
           .insert(rentAssets)
           .values({
-            rentNo,
+            rentNo: await generateRentNumber(tx),
             rentDate: data.dateStart,
-            outletId: data.outletId,
+            companyId: data.companyId,
             note: data.note?.trim() || null,
             status: "NEW",
             createdBy: user.id,
@@ -256,7 +184,6 @@ export async function assetLeaseStore(formData: FormData) {
             id: preparedDetails[index]!.id,
             rentAssetId: rentAsset.id,
             assetId: detail.assetId,
-            customerId: detail.customerId,
             dateStart: data.dateStart,
             amount: detail.amount,
             createdBy: user.id,
@@ -289,6 +216,132 @@ export async function assetLeaseStore(formData: FormData) {
     revalidatePath("/distribution/asset-lease")
 
     return { success: true, message: "Asset lease created successfully" }
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Something went wrong",
+    }
+  }
+}
+
+export async function assetLeaseApprove(id: string, receiveDate: string) {
+  const user = await requireUser()
+  const permission = await authorizeAction("asset-lease:update")
+  if (!permission.authorized) return permission.response
+
+  if (!z.uuid().safeParse(id).success) {
+    return { success: false, message: "Asset lease not found" }
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      const existing = await tx.query.rentAssets.findFirst({
+        where: eq(rentAssets.id, id),
+        columns: { id: true, rentDate: true, status: true },
+      })
+      if (!existing) throw new Error("Asset lease not found")
+
+      const validation = assetLeaseApproveSchema.safeParse({
+        id,
+        rentDate: existing.rentDate,
+        receiveDate,
+      })
+      if (!validation.success) {
+        throw new Error(
+          validation.error.issues[0]?.message ?? "Invalid receive date"
+        )
+      }
+      if (existing.status !== "NEW") {
+        throw new Error("Only NEW asset leases can be approved")
+      }
+
+      const leasedAssets = await tx
+        .select({ id: assetDatas.id, number: assetDatas.nomorAssets })
+        .from(rentAssetDetails)
+        .innerJoin(assetDatas, eq(rentAssetDetails.assetId, assetDatas.id))
+        .where(eq(rentAssetDetails.rentAssetId, id))
+      const assetIds = [...new Set(leasedAssets.map((asset) => asset.id))]
+      if (!assetIds.length) throw new Error("Asset lease has no details")
+
+      const [decided] = await tx
+        .update(rentAssets)
+        .set({
+          status: "APPROVED",
+          receiveDate: validation.data.receiveDate,
+          reason: null,
+          updatedBy: user.id,
+        })
+        .where(and(eq(rentAssets.id, id), eq(rentAssets.status, "NEW")))
+        .returning({ id: rentAssets.id })
+      if (!decided) throw new Error("Asset lease was already decided")
+
+      const claimed = await tx
+        .update(assetDatas)
+        .set({ status: "DISEWA", updatedBy: user.id })
+        .where(
+          and(
+            inArray(assetDatas.id, assetIds),
+            eq(assetDatas.status, "TERSEDIA")
+          )
+        )
+        .returning({ id: assetDatas.id })
+
+      if (claimed.length !== assetIds.length) {
+        const claimedIds = new Set(claimed.map((asset) => asset.id))
+        const unavailable = leasedAssets
+          .filter((asset) => !claimedIds.has(asset.id))
+          .map((asset) => asset.number)
+          .join(", ")
+        throw new Error(`Assets no longer available: ${unavailable}`)
+      }
+    })
+
+    revalidatePath("/distribution/asset-lease")
+    revalidatePath(`/distribution/asset-lease/${id}`)
+    return { success: true, message: "Asset lease approved successfully" }
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Something went wrong",
+    }
+  }
+}
+
+export async function assetLeaseReject(id: string, reason: string) {
+  const user = await requireUser()
+  const permission = await authorizeAction("asset-lease:update")
+  if (!permission.authorized) return permission.response
+
+  const validation = assetLeaseRejectSchema.safeParse({ id, reason })
+  if (!validation.success) {
+    return {
+      success: false,
+      message: validation.error.issues[0]?.message ?? "Invalid rejection",
+    }
+  }
+
+  try {
+    const [rejected] = await db
+      .update(rentAssets)
+      .set({
+        status: "REJECTED",
+        receiveDate: null,
+        reason: validation.data.reason,
+        updatedBy: user.id,
+      })
+      .where(and(eq(rentAssets.id, id), eq(rentAssets.status, "NEW")))
+      .returning({ id: rentAssets.id })
+
+    if (!rejected) {
+      return {
+        success: false,
+        message: "Asset lease not found or already decided",
+      }
+    }
+
+    revalidatePath("/distribution/asset-lease")
+    revalidatePath(`/distribution/asset-lease/${id}`)
+    return { success: true, message: "Asset lease rejected successfully" }
   } catch (error) {
     return {
       success: false,

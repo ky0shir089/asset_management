@@ -1,14 +1,15 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import {
   Field,
+  FieldDescription,
   FieldError,
   FieldLabel,
   FieldLegend,
   FieldSet,
 } from "@/components/ui/field"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import {
   SearchableSelect,
@@ -22,16 +23,22 @@ import {
 } from "@/lib/upload-constants"
 import { ImagePlus, Trash2, X } from "lucide-react"
 import Image from "next/image"
-import { useCallback, useMemo, useRef, useState, type DragEvent } from "react"
-import { toast } from "sonner"
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+  type Ref,
+} from "react"
 import {
   Controller,
-  useWatch,
   type Control,
   type FieldErrors,
   type UseFormTrigger,
 } from "react-hook-form"
 import { NumericFormat } from "react-number-format"
+import { toast } from "sonner"
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"]
 
@@ -39,10 +46,14 @@ function PhotoDropzone({
   files,
   onChange,
   id,
+  dropzoneRef,
+  describedBy,
 }: {
   files: FileList | File[] | null | undefined
   onChange: (files: FileList | File[] | null) => void
   id: string
+  dropzoneRef: Ref<HTMLDivElement>
+  describedBy: string
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
@@ -70,28 +81,37 @@ function PhotoDropzone({
       }
 
       const filtered: File[] = []
-      const rejected: string[] = []
+      const rejectedTypes: string[] = []
+      const rejectedSizes: string[] = []
 
-      for (const f of Array.from(incoming).slice(0, availableSlots)) {
-        if (!ACCEPTED_TYPES.includes(f.type)) continue
-        if (f.size > MAX_PHOTO_FILE_SIZE_BYTES) {
-          rejected.push(f.name)
+      for (const file of Array.from(incoming)) {
+        if (!ACCEPTED_TYPES.includes(file.type)) {
+          rejectedTypes.push(file.name)
           continue
         }
-        filtered.push(f)
+        if (file.size > MAX_PHOTO_FILE_SIZE_BYTES) {
+          rejectedSizes.push(file.name)
+          continue
+        }
+        filtered.push(file)
       }
 
-      if (incoming.length > availableSlots) {
+      if (filtered.length > availableSlots) {
         toast.error(`Upload at most ${MAX_PHOTO_FILE_COUNT} photos`)
       }
-      if (rejected.length) {
+      if (rejectedTypes.length) {
         toast.error(
-          `${rejected.join(", ")} exceeds ${MAX_PHOTO_FILE_SIZE_MB} MB limit`
+          `${rejectedTypes.join(", ")} must be JPEG, PNG, or WebP files`
+        )
+      }
+      if (rejectedSizes.length) {
+        toast.error(
+          `${rejectedSizes.join(", ")} exceeds ${MAX_PHOTO_FILE_SIZE_MB} MB limit`
         )
       }
 
       if (!filtered.length) return
-      onChange([...existing, ...filtered])
+      onChange([...existing, ...filtered.slice(0, availableSlots)])
     },
     [files, onChange]
   )
@@ -137,8 +157,10 @@ function PhotoDropzone({
   return (
     <div className="space-y-2">
       <div
+        ref={dropzoneRef}
         role="button"
         tabIndex={0}
+        aria-describedby={describedBy}
         onDragOver={handleDrag}
         onDragEnter={handleDragIn}
         onDragLeave={handleDragOut}
@@ -238,7 +260,6 @@ interface AssetLeaseDetailSectionProps {
   errors: FieldErrors<assetLeaseSchemaType>
   trigger: UseFormTrigger<assetLeaseSchemaType>
   assetItems: SearchableSelectOption[]
-  customerItems: SearchableSelectOption[]
   removeDetail: () => void
   canRemove: boolean
 }
@@ -249,11 +270,9 @@ export default function AssetLeaseDetailSection({
   errors,
   trigger,
   assetItems,
-  customerItems,
   removeDetail,
   canRemove,
 }: AssetLeaseDetailSectionProps) {
-  const selectedOutletId = useWatch({ control, name: "outletId" })
   const detailErrors = errors.details?.[index]
 
   return (
@@ -271,7 +290,7 @@ export default function AssetLeaseDetailSection({
         <Trash2 aria-hidden="true" />
       </Button>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Controller
           name={`details.${index}.assetId`}
           control={control}
@@ -296,35 +315,6 @@ export default function AssetLeaseDetailSection({
                 aria-invalid={fieldState.invalid}
               />
               <FieldError errors={[detailErrors?.assetId]} />
-            </Field>
-          )}
-        />
-
-        <Controller
-          name={`details.${index}.customerId`}
-          control={control}
-          render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor={field.name}>Customer</FieldLabel>
-              <SearchableSelect
-                id={field.name}
-                name={field.name}
-                options={customerItems}
-                value={field.value}
-                onValueChange={(value) => {
-                  field.onChange(value)
-                  void trigger(`details.${index}.customerId`)
-                }}
-                placeholder={
-                  selectedOutletId ? "Select Customer" : "Select outlet first"
-                }
-                searchPlaceholder="Search customer..."
-                emptyMessage="No customer found"
-                disabled={!selectedOutletId}
-                required
-                aria-invalid={fieldState.invalid}
-              />
-              <FieldError errors={[detailErrors?.customerId]} />
             </Field>
           )}
         />
@@ -360,13 +350,25 @@ export default function AssetLeaseDetailSection({
       <Controller
         name={`details.${index}.photos`}
         control={control}
-        render={({ field }) => (
-          <Field className="mt-4">
+        render={({ field, fieldState }) => (
+          <Field className="mt-4" data-invalid={fieldState.invalid}>
             <FieldLabel htmlFor={`photos-${index}`}>Photos</FieldLabel>
+            <FieldDescription id={`photos-${index}-description`}>
+              Required. Upload 1-10 JPEG, PNG, or WebP files, maximum 1 MB each.
+            </FieldDescription>
             <PhotoDropzone
               id={`photos-${index}`}
-              files={field.value as FileList | File[] | null | undefined}
-              onChange={field.onChange}
+              files={field.value}
+              dropzoneRef={field.ref}
+              describedBy={`photos-${index}-description photos-${index}-error`}
+              onChange={(files) => {
+                field.onChange(files ? Array.from(files) : [])
+                void trigger(`details.${index}.photos`)
+              }}
+            />
+            <FieldError
+              id={`photos-${index}-error`}
+              errors={[detailErrors?.photos]}
             />
           </Field>
         )}

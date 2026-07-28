@@ -12,8 +12,7 @@ import { LoadingSwap } from "@/components/ui/loading-swap"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import type {
   assetLeaseAssetOptionType,
-  assetLeaseCustomerOptionType,
-  outletOptionType,
+  assetLeaseCompanyOptionType,
 } from "@/data/select"
 import {
   assetLeaseSchema,
@@ -22,14 +21,13 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
 import { useTransition } from "react"
-import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form"
+import { Controller, useFieldArray, useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { assetLeaseStore } from "../action"
 import AssetLeaseDetailSection from "./AssetLeaseDetailSection"
 
 interface AssetLeaseFormProps {
-  outlets: outletOptionType[]
-  customers: assetLeaseCustomerOptionType[]
+  companies: assetLeaseCompanyOptionType[]
   assets: assetLeaseAssetOptionType[]
 }
 
@@ -52,14 +50,13 @@ function jakartaToday(): string {
 function blankDetail() {
   return {
     assetId: "",
-    customerId: "",
     amount: 0,
+    photos: [] as File[],
   }
 }
 
 export default function AssetLeaseForm({
-  outlets,
-  customers,
+  companies,
   assets,
 }: AssetLeaseFormProps) {
   const [isPending, startTransition] = useTransition()
@@ -67,7 +64,7 @@ export default function AssetLeaseForm({
   const form = useForm<assetLeaseSchemaType>({
     resolver: zodResolver(assetLeaseSchema),
     defaultValues: {
-      outletId: "",
+      companyId: "",
       dateStart: jakartaToday(),
       note: "",
       details: [blankDetail()],
@@ -82,14 +79,10 @@ export default function AssetLeaseForm({
     name: "details",
     keyName: "fieldId",
   })
-  const selectedOutletId = useWatch({
-    control: form.control,
-    name: "outletId",
-  })
 
-  const outletItems = outlets.map(({ id, name }) => ({
+  const companyItems = companies.map(({ id, code, name }) => ({
     value: id,
-    label: name,
+    label: `${code} - ${name}`,
   }))
   const assetItems = assets.map((asset) => {
     const assetCode = asset.assetCode
@@ -102,52 +95,24 @@ export default function AssetLeaseForm({
           .join(" - ") || asset.id,
     }
   })
-  const customerItems = customers
-    .filter((customer) => customer.outletId === selectedOutletId)
-    .map(({ id, name }) => ({ value: id, label: name }))
-
-  function changeOutlet(value: string, currentValue: string) {
-    if (value === currentValue) return
-
-    const customerPaths = form
-      .getValues("details")
-      .map((_, index) => `details.${index}.customerId` as const)
-
-    customerPaths.forEach((path) => {
-      form.setValue(path, "", {
-        shouldDirty: true,
-        shouldValidate: false,
-      })
-    })
-    form.setValue("outletId", value, {
-      shouldDirty: true,
-      shouldTouch: true,
-      shouldValidate: false,
-    })
-    void form.trigger(["outletId", ...customerPaths])
-  }
 
   function onSubmit(values: assetLeaseSchemaType) {
     startTransition(async () => {
       const formData = new FormData()
-      formData.set("outletId", values.outletId)
+      formData.set("companyId", values.companyId)
       formData.set("dateStart", values.dateStart)
       if (values.note) formData.set("note", values.note)
-
-      const details = values.details.map((detail) => ({
-        assetId: detail.assetId,
-        customerId: detail.customerId,
-        amount: detail.amount,
-      }))
-      formData.set("details", JSON.stringify(details))
+      formData.set(
+        "details",
+        JSON.stringify(
+          values.details.map(({ assetId, amount }) => ({ assetId, amount }))
+        )
+      )
 
       values.details.forEach((detail, index) => {
-        const files = detail.photos as FileList | undefined
-        if (files) {
-          for (const file of Array.from(files)) {
-            formData.append(`photos-${index}`, file)
-          }
-        }
+        detail.photos.forEach((file) =>
+          formData.append(`photos-${index}`, file)
+        )
       })
 
       const result = await assetLeaseStore(formData)
@@ -172,21 +137,21 @@ export default function AssetLeaseForm({
         <FieldGroup>
           <div className="grid gap-4 sm:grid-cols-3">
             <Controller
-              name="outletId"
+              name="companyId"
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor={field.name}>Outlet</FieldLabel>
+                  <FieldLabel htmlFor={field.name}>Company</FieldLabel>
                   <SearchableSelect
                     id={field.name}
                     name={field.name}
-                    options={outletItems}
+                    options={companyItems}
                     value={field.value}
-                    onValueChange={(value) => changeOutlet(value, field.value)}
-                    placeholder="Select Outlet"
-                    searchPlaceholder="Search outlet..."
-                    emptyMessage="No outlet found"
-                    disabled={!outletItems.length}
+                    onValueChange={field.onChange}
+                    placeholder="Select Company"
+                    searchPlaceholder="Search company..."
+                    emptyMessage="No company found"
+                    disabled={!companyItems.length}
                     required
                     aria-invalid={fieldState.invalid}
                   />
@@ -244,13 +209,19 @@ export default function AssetLeaseForm({
 
       <div className="rounded-lg border p-4">
         <div className="mb-4 flex items-center justify-between gap-4">
-          <h2 className="font-semibold">Lease Details</h2>
+          <div>
+            <h2 className="font-semibold">Lease Details</h2>
+            <p className="text-sm text-muted-foreground">
+              Up to 10 assets per lease.
+            </p>
+          </div>
           <Button
             type="button"
             variant="outline"
             onClick={() => appendDetail(blankDetail())}
+            disabled={detailFields.length >= 10}
           >
-            Add Detail
+            Add Asset
           </Button>
         </div>
 
@@ -267,7 +238,6 @@ export default function AssetLeaseForm({
               errors={form.formState.errors}
               trigger={form.trigger}
               assetItems={assetItems}
-              customerItems={customerItems}
               removeDetail={() => {
                 removeDetail(index)
                 void form.trigger("details")

@@ -69,10 +69,7 @@ export default function AssetLeaseDecisionActions({
 
         toast.success(result.message)
         setApproveOpen(false)
-        requestAnimationFrame(() =>
-          document.getElementById("asset-lease-detail-title")?.focus()
-        )
-        router.refresh()
+        router.replace("/distribution/asset-lease")
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : "Something went wrong"
@@ -100,10 +97,7 @@ export default function AssetLeaseDecisionActions({
         toast.success(result.message)
         setReason("")
         setRejectOpen(false)
-        requestAnimationFrame(() =>
-          document.getElementById("asset-lease-detail-title")?.focus()
-        )
-        router.refresh()
+        router.replace("/distribution/asset-lease")
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : "Something went wrong"

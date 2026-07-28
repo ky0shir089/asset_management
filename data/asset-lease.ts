@@ -1,11 +1,11 @@
 import "server-only"
 
 import { db } from "@/drizzle/db"
-import { outlets, rentAssets } from "@/drizzle/schema"
-import { requirePermission } from "@/lib/auth/permission"
+import { companies, rentAssets } from "@/drizzle/schema"
+import { can, requirePermission } from "@/lib/auth/permission"
 import { isSuperAdmin } from "@/lib/auth/permission-query"
 import { paginatedResponse, paginationParams } from "@/lib/helper"
-import { and, count, eq, ilike, inArray } from "drizzle-orm"
+import { and, count, eq, ilike, inArray, or, type SQL } from "drizzle-orm"
 import { notFound } from "next/navigation"
 import { z } from "zod"
 import { requireUser } from "./require-user"
@@ -21,22 +21,31 @@ export async function assetLeaseIndex(
   const pagination = paginationParams(currentPage, size)
   const search = query?.trim()
   const superAdmin = await isSuperAdmin(user.id)
-  const conditions = []
+  const canUpdate = await can("asset-lease:update")
+  const conditions: SQL[] = []
 
   if (!superAdmin) {
-    conditions.push(eq(rentAssets.createdBy, user.id))
+    const visible = canUpdate
+      ? or(eq(rentAssets.createdBy, user.id), eq(rentAssets.status, "NEW"))
+      : eq(rentAssets.createdBy, user.id)
+    if (visible) conditions.push(visible)
   }
 
   if (search) {
-    conditions.push(
+    const pattern = `%${search}%`
+    const matches = or(
+      ilike(rentAssets.rentNo, pattern),
+      ilike(rentAssets.note, pattern),
+      ilike(rentAssets.status, pattern),
       inArray(
-        rentAssets.outletId,
+        rentAssets.companyId,
         db
-          .select({ id: outlets.id })
-          .from(outlets)
-          .where(ilike(outlets.name, `%${search}%`))
+          .select({ id: companies.id })
+          .from(companies)
+          .where(ilike(companies.name, pattern))
       )
     )
+    if (matches) conditions.push(matches)
   }
 
   const where = conditions.length ? and(...conditions) : undefined
@@ -44,9 +53,7 @@ export async function assetLeaseIndex(
     db.query.rentAssets.findMany({
       where,
       with: {
-        outlet: {
-          columns: { name: true },
-        },
+        company: { columns: { id: true, code: true, name: true } },
       },
       orderBy: (rentAssets, { desc }) => [desc(rentAssets.createdAt)],
       limit: pagination.pageSize,
@@ -65,18 +72,20 @@ export async function assetLeaseShow(rentId: string) {
 
   const user = await requireUser()
   await requirePermission("asset-lease:read")
+  const canUpdate = await can("asset-lease:update")
 
   const data = await db.query.rentAssets.findFirst({
     where: eq(rentAssets.id, rentId),
     with: {
-      outlet: {
-        columns: { id: true, name: true },
+      company: {
+        columns: { id: true, code: true, name: true },
       },
       details: {
-        orderBy: (details, { asc }) => [asc(details.id)],
+        orderBy: (details, { asc }) => [asc(details.createdAt)],
         with: {
-          customer: {
-            columns: { id: true, name: true },
+          photos: {
+            columns: { id: true, name: true, path: true },
+            orderBy: (photos, { asc }) => [asc(photos.createdAt)],
           },
           asset: {
             columns: { id: true, nomorAssets: true },
@@ -104,11 +113,13 @@ export async function assetLeaseShow(rentId: string) {
   }
 
   const superAdmin = await isSuperAdmin(user.id)
-  if (!superAdmin && data.createdBy !== user.id) {
-    notFound()
-  }
+  const visible =
+    superAdmin ||
+    data.createdBy === user.id ||
+    (canUpdate && data.status === "NEW")
+  if (!visible) notFound()
 
-  return data
+  return { ...data, canDecide: canUpdate && data.status === "NEW" }
 }
 
 export type assetLeaseIndexType = Awaited<

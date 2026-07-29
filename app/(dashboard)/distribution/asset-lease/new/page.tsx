@@ -1,6 +1,6 @@
 import FormSkeleton from "@/components/form-skeleton"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { assetLeaseAssetOptions, assetLeaseCompanyOptions } from "@/data/select"
+import { assetCategoryOptions, assetLeaseCompanyOptions } from "@/data/select"
 import { requirePermission } from "@/lib/auth/permission"
 import { Suspense } from "react"
 import AssetLeaseForm from "../_components/AssetLeaseForm"
@@ -8,12 +8,12 @@ import AssetLeaseForm from "../_components/AssetLeaseForm"
 const RenderForm = async () => {
   await requirePermission("asset-lease:create")
 
-  const [companies, assets] = await Promise.all([
+  const [companies, categories] = await Promise.all([
     assetLeaseCompanyOptions(),
-    assetLeaseAssetOptions(),
+    assetCategoryOptions(),
   ])
 
-  return <AssetLeaseForm companies={companies} assets={assets} />
+  return <AssetLeaseForm companies={companies} categories={categories} />
 }
 
 export default function AssetLeaseNewPage() {

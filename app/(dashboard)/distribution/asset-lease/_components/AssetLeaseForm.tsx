@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { LoadingSwap } from "@/components/ui/loading-swap"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import type {
-  assetLeaseAssetOptionType,
+  assetCategoryOptionType,
   assetLeaseCompanyOptionType,
 } from "@/data/select"
 import {
@@ -28,7 +28,7 @@ import AssetLeaseDetailSection from "./AssetLeaseDetailSection"
 
 interface AssetLeaseFormProps {
   companies: assetLeaseCompanyOptionType[]
-  assets: assetLeaseAssetOptionType[]
+  categories: assetCategoryOptionType[]
 }
 
 function jakartaToday(): string {
@@ -57,7 +57,7 @@ function blankDetail() {
 
 export default function AssetLeaseForm({
   companies,
-  assets,
+  categories,
 }: AssetLeaseFormProps) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
@@ -84,17 +84,10 @@ export default function AssetLeaseForm({
     value: id,
     label: `${code} - ${name}`,
   }))
-  const assetItems = assets.map((asset) => {
-    const assetCode = asset.assetCode
-
-    return {
-      value: asset.id,
-      label:
-        [asset.nomorAssets, assetCode?.code, assetCode?.name]
-          .filter(Boolean)
-          .join(" - ") || asset.id,
-    }
-  })
+  const categoryItems = categories.map(({ id, name }) => ({
+    value: id,
+    label: name,
+  }))
 
   function onSubmit(values: assetLeaseSchemaType) {
     startTransition(async () => {
@@ -237,7 +230,7 @@ export default function AssetLeaseForm({
               control={form.control}
               errors={form.formState.errors}
               trigger={form.trigger}
-              assetItems={assetItems}
+              categoryItems={categoryItems}
               removeDetail={() => {
                 removeDetail(index)
                 void form.trigger("details")

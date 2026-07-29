@@ -28,6 +28,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useTransition,
   type DragEvent,
   type Ref,
 } from "react"
@@ -39,6 +40,7 @@ import {
 } from "react-hook-form"
 import { NumericFormat } from "react-number-format"
 import { toast } from "sonner"
+import { getAssetCodes, getAssets } from "../action"
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"]
 
@@ -259,7 +261,7 @@ interface AssetLeaseDetailSectionProps {
   control: Control<assetLeaseSchemaType>
   errors: FieldErrors<assetLeaseSchemaType>
   trigger: UseFormTrigger<assetLeaseSchemaType>
-  assetItems: SearchableSelectOption[]
+  categoryItems: SearchableSelectOption[]
   removeDetail: () => void
   canRemove: boolean
 }
@@ -269,11 +271,35 @@ export default function AssetLeaseDetailSection({
   control,
   errors,
   trigger,
-  assetItems,
+  categoryItems,
   removeDetail,
   canRemove,
 }: AssetLeaseDetailSectionProps) {
   const detailErrors = errors.details?.[index]
+  const [categoryId, setCategoryId] = useState("")
+  const [codeId, setCodeId] = useState("")
+  const [codeItems, setCodeItems] = useState<SearchableSelectOption[]>([])
+  const [assets, setAssets] = useState<
+    Array<{
+      id: string
+      nomorAssets: string
+      condition: string
+      specifications: Array<{ name: string; value: string | null }>
+    }>
+  >([])
+  const [selectedAsset, setSelectedAsset] = useState<
+    (typeof assets)[number] | null
+  >(null)
+  const [, startCodeTransition] = useTransition()
+  const [, startAssetTransition] = useTransition()
+  const [isLoadingCodes, setIsLoadingCodes] = useState(false)
+  const [isLoadingAssets, setIsLoadingAssets] = useState(false)
+  const codeRequestId = useRef(0)
+  const assetRequestId = useRef(0)
+  const assetItems = assets.map(({ id, nomorAssets }) => ({
+    value: id,
+    label: nomorAssets,
+  }))
 
   return (
     <FieldSet className="relative rounded-md border p-4">
@@ -290,13 +316,118 @@ export default function AssetLeaseDetailSection({
         <Trash2 aria-hidden="true" />
       </Button>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Controller
-          name={`details.${index}.assetId`}
-          control={control}
-          render={({ field, fieldState }) => (
+      <Controller
+        name={`details.${index}.assetId`}
+        control={control}
+        render={({ field, fieldState }) => (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Field>
+              <FieldLabel htmlFor={`asset-category-${index}`}>
+                Asset Category
+              </FieldLabel>
+              <SearchableSelect
+                id={`asset-category-${index}`}
+                name={`asset-category-${index}`}
+                options={categoryItems}
+                value={categoryId}
+                onValueChange={(value) => {
+                  setCategoryId(value)
+                  setCodeId("")
+                  setCodeItems([])
+                  setAssets([])
+                  setSelectedAsset(null)
+                  field.onChange("")
+                  const requestId = ++codeRequestId.current
+                  ++assetRequestId.current
+                  setIsLoadingCodes(true)
+                  setIsLoadingAssets(false)
+                  startCodeTransition(async () => {
+                    try {
+                      const result = await getAssetCodes(value)
+                      if (requestId !== codeRequestId.current) return
+                      if (!result.success) {
+                        toast.error(result.message)
+                        return
+                      }
+                      setCodeItems(
+                        result.data.map(({ id, code, name }) => ({
+                          value: id,
+                          label: `${code} - ${name}`,
+                        }))
+                      )
+                    } catch (error) {
+                      if (requestId === codeRequestId.current) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Something went wrong"
+                        )
+                      }
+                    } finally {
+                      if (requestId === codeRequestId.current) {
+                        setIsLoadingCodes(false)
+                      }
+                    }
+                  })
+                }}
+                placeholder="Select Asset Category"
+                searchPlaceholder="Search category..."
+                emptyMessage="No category found"
+                disabled={!categoryItems.length}
+              />
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor={`asset-code-${index}`}>
+                Asset Code
+              </FieldLabel>
+              <SearchableSelect
+                id={`asset-code-${index}`}
+                name={`asset-code-${index}`}
+                options={codeItems}
+                value={codeId}
+                onValueChange={(value) => {
+                  setCodeId(value)
+                  setAssets([])
+                  setSelectedAsset(null)
+                  field.onChange("")
+                  const requestId = ++assetRequestId.current
+                  setIsLoadingAssets(true)
+                  startAssetTransition(async () => {
+                    try {
+                      const result = await getAssets(value)
+                      if (requestId !== assetRequestId.current) return
+                      if (!result.success) {
+                        toast.error(result.message)
+                        return
+                      }
+                      setAssets(result.data)
+                    } catch (error) {
+                      if (requestId === assetRequestId.current) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Something went wrong"
+                        )
+                      }
+                    } finally {
+                      if (requestId === assetRequestId.current) {
+                        setIsLoadingAssets(false)
+                      }
+                    }
+                  })
+                }}
+                placeholder={
+                  isLoadingCodes ? "Loading codes..." : "Select Asset Code"
+                }
+                searchPlaceholder="Search asset code..."
+                emptyMessage="No asset code found"
+                disabled={!categoryId || isLoadingCodes}
+              />
+            </Field>
+
             <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor={field.name}>Asset</FieldLabel>
+              <FieldLabel htmlFor={field.name}>Asset Number</FieldLabel>
               <SearchableSelect
                 id={field.name}
                 name={field.name}
@@ -304,48 +435,76 @@ export default function AssetLeaseDetailSection({
                 value={field.value}
                 onValueChange={(value) => {
                   field.onChange(value)
+                  setSelectedAsset(
+                    assets.find((asset) => asset.id === value) ?? null
+                  )
                   void trigger("details")
                   void trigger(`details.${index}.assetId`)
                 }}
-                placeholder="Select Asset"
-                searchPlaceholder="Search asset..."
+                placeholder={
+                  isLoadingAssets ? "Loading assets..." : "Select Asset Number"
+                }
+                searchPlaceholder="Search asset number..."
                 emptyMessage="No asset found"
-                disabled={!assetItems.length}
+                disabled={!codeId || isLoadingAssets}
                 required
                 aria-invalid={fieldState.invalid}
               />
               <FieldError errors={[detailErrors?.assetId]} />
             </Field>
-          )}
-        />
 
-        <Controller
-          name={`details.${index}.amount`}
-          control={control}
-          render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor={field.name}>Amount</FieldLabel>
-              <NumericFormat
-                id={field.name}
-                name={field.name}
-                value={Number(field.value)}
-                customInput={Input}
-                getInputRef={field.ref}
-                thousandSeparator
-                decimalScale={0}
-                allowNegative={false}
-                onBlur={field.onBlur}
-                onValueChange={({ floatValue }) =>
-                  field.onChange(floatValue ?? 0)
-                }
-                aria-invalid={fieldState.invalid}
-                required
-              />
-              <FieldError errors={[detailErrors?.amount]} />
-            </Field>
-          )}
-        />
-      </div>
+            <Controller
+              name={`details.${index}.amount`}
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name}>Amount</FieldLabel>
+                  <NumericFormat
+                    id={field.name}
+                    name={field.name}
+                    value={Number(field.value)}
+                    customInput={Input}
+                    getInputRef={field.ref}
+                    thousandSeparator
+                    decimalScale={0}
+                    allowNegative={false}
+                    onBlur={field.onBlur}
+                    onValueChange={({ floatValue }) =>
+                      field.onChange(floatValue ?? 0)
+                    }
+                    aria-invalid={fieldState.invalid}
+                    required
+                  />
+                  <FieldError errors={[detailErrors?.amount]} />
+                </Field>
+              )}
+            />
+          </div>
+        )}
+      />
+
+      {selectedAsset && (
+        <div className="mt-4 rounded-md bg-muted/50 p-3 text-sm">
+          <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+            <div>
+              <dt className="font-medium">Condition</dt>
+              <dd className="text-muted-foreground">
+                {selectedAsset.condition || "-"}
+              </dd>
+            </div>
+            {selectedAsset.specifications.map(
+              (specification, specificationIndex) => (
+                <div key={`${specification.name}-${specificationIndex}`}>
+                  <dt className="font-medium">{specification.name}</dt>
+                  <dd className="text-muted-foreground">
+                    {specification.value || "-"}
+                  </dd>
+                </div>
+              )
+            )}
+          </dl>
+        </div>
+      )}
 
       <Controller
         name={`details.${index}.photos`}

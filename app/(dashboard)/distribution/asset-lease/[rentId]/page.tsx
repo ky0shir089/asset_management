@@ -52,111 +52,121 @@ export default async function AssetLeaseDetailPage({
   const data = await assetLeaseShow(rentId)
 
   return (
-    <Card>
-      <CardHeader className="gap-4">
-        <Link
-          href="/distribution/asset-lease"
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-        >
-          Back
-        </Link>
+    <>
+      <Link
+        href="/distribution/asset-lease"
+        className={buttonVariants({
+          variant: "outline",
+          size: "sm",
+          className: "w-fit",
+        })}
+      >
+        Back
+      </Link>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-2xl">
-              <h1 id="asset-lease-detail-title" tabIndex={-1}>
-                Asset Lease Detail
-              </h1>
-            </CardTitle>
-            <p className="font-medium">{data.rentNo}</p>
-            <p className="text-sm text-muted-foreground">
-              {data.company?.name ?? "-"}
-            </p>
-          </div>
-          <AssetLeaseStatusBadge status={data.status} />
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-6">
-        {data.canDecide && (
-          <div className="flex flex-col gap-4 rounded-lg border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Pending decision</p>
-              <p className="font-semibold">{data.company?.name ?? "-"}</p>
-            </div>
-            <AssetLeaseDecisionActions
-              id={data.id}
-              status={data.status}
-              rentDate={data.rentDate}
-              defaultReceiveDate={jakartaToday()}
-            />
-          </div>
-        )}
-
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <InfoItem label="Lease Date" value={data.rentDate} />
-          <InfoItem label="Receive Date" value={data.receiveDate ?? "-"} />
-          <InfoItem label="Company" value={data.company?.name ?? "-"} />
-          <InfoItem label="Note" value={data.note ?? "-"} />
-          <InfoItem
-            label="Status"
-            value={<AssetLeaseStatusBadge status={data.status} />}
-          />
-          {data.status === "REJECTED" && (
-            <div className="rounded-md border p-3 sm:col-span-2 lg:col-span-5">
-              <p className="text-sm text-muted-foreground">Rejection Reason</p>
-              <p className="mt-1 font-medium wrap-break-word">
-                {data.reason ?? "-"}
+      <Card>
+        <CardHeader className="gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <CardTitle className="text-2xl">
+                <h1 id="asset-lease-detail-title" tabIndex={-1}>
+                  Asset Lease Detail
+                </h1>
+              </CardTitle>
+              <p className="font-medium">{data.rentNo}</p>
+              <p className="text-sm text-muted-foreground">
+                {data.company?.name ?? "-"}
               </p>
             </div>
-          )}
-        </div>
+            <AssetLeaseStatusBadge status={data.status} />
+          </div>
+        </CardHeader>
 
-        <section>
-          <h2 className="mb-3 font-semibold">Lease Details</h2>
-          <div className="overflow-x-auto rounded-md border">
-            <Table className="min-w-3xl">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Asset No</TableHead>
-                  <TableHead>Asset Name</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Photos</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.details.length ? (
-                  data.details.map((detail) => (
-                    <TableRow key={detail.id}>
-                      <TableCell className="font-medium">
-                        {detail.asset?.nomorAssets ?? "-"}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {detail.asset?.poDetail?.prDetail?.assetCode?.name ??
-                          "-"}
-                      </TableCell>
-                      <TableCell>{detail.dateStart}</TableCell>
-                      <TableCell className="text-right">
-                        {(detail.amount ?? 0).toLocaleString("id-ID")}
-                      </TableCell>
-                      <TableCell>
-                        <AssetLeasePhotoCarousel photos={detail.photos} />
+        <CardContent className="space-y-6">
+          {data.canDecide && (
+            <div className="flex flex-col gap-4 rounded-lg border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Pending decision
+                </p>
+                <p className="font-semibold">{data.company?.name ?? "-"}</p>
+              </div>
+              <AssetLeaseDecisionActions
+                id={data.id}
+                status={data.status}
+                rentDate={data.rentDate}
+                defaultReceiveDate={jakartaToday()}
+              />
+            </div>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <InfoItem label="Lease Date" value={data.rentDate} />
+            <InfoItem label="Receive Date" value={data.receiveDate ?? "-"} />
+            <InfoItem label="Company" value={data.company?.name ?? "-"} />
+            <InfoItem label="Note" value={data.note ?? "-"} />
+            <InfoItem
+              label="Status"
+              value={<AssetLeaseStatusBadge status={data.status} />}
+            />
+            {data.status === "REJECTED" && (
+              <div className="rounded-md border p-3 sm:col-span-2 lg:col-span-5">
+                <p className="text-sm text-muted-foreground">
+                  Rejection Reason
+                </p>
+                <p className="mt-1 font-medium wrap-break-word">
+                  {data.reason ?? "-"}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <section>
+            <h2 className="mb-3 font-semibold">Lease Details</h2>
+            <div className="overflow-x-auto rounded-md border">
+              <Table className="min-w-3xl">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Asset No</TableHead>
+                    <TableHead>Asset Name</TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Photos</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.details.length ? (
+                    data.details.map((detail) => (
+                      <TableRow key={detail.id}>
+                        <TableCell className="font-medium">
+                          {detail.asset?.nomorAssets ?? "-"}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {detail.asset?.poDetail?.prDetail?.assetCode?.name ??
+                            "-"}
+                        </TableCell>
+                        <TableCell>{detail.dateStart}</TableCell>
+                        <TableCell className="text-right">
+                          {(detail.amount ?? 0).toLocaleString("id-ID")}
+                        </TableCell>
+                        <TableCell>
+                          <AssetLeasePhotoCarousel photos={detail.photos} />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center">
+                        No lease details.
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      No lease details.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </section>
-      </CardContent>
-    </Card>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </section>
+        </CardContent>
+      </Card>
+    </>
   )
 }

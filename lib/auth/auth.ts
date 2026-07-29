@@ -28,6 +28,22 @@ export const auth = betterAuth({
       },
     },
   },
+  session: {
+    additionalFields: {
+      companyId: {
+        type: "string",
+      },
+      companyName: {
+        type: "string",
+      },
+      branchId: {
+        type: "string",
+      },
+      branchName: {
+        type: "string",
+      },
+    },
+  },
   emailAndPassword: {
     enabled: true,
   },

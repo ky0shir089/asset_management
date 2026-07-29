@@ -50,7 +50,7 @@ export const rentAssetDetails = pgTable("rent_asset_details", {
   assetId: uuid("asset_id")
     .notNull()
     .references(() => assetDatas.id, { onDelete: "cascade" }),
-  dateStart: date("date_start").notNull(),
+  dateStart: date("date_start"),
   dateEnd: date("date_end"),
   amount: integer("amount").notNull().default(0),
   createdBy: text("created_by")

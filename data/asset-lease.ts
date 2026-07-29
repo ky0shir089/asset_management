@@ -54,6 +54,7 @@ export async function assetLeaseIndex(
       where,
       with: {
         company: { columns: { id: true, code: true, name: true } },
+        details: { columns: { id: true, amount: true } },
       },
       orderBy: (rentAssets, { desc }) => [desc(rentAssets.createdAt)],
       limit: pagination.pageSize,

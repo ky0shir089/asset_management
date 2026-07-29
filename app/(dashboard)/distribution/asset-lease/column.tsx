@@ -20,6 +20,22 @@ export const columns: ColumnDef<assetLeaseIndexType>[] = [
     cell: ({ row }) => row.original.receiveDate ?? "-",
   },
   {
+    header: "Total Asset",
+    cell: ({ row }) => (
+      <div className="text-center">{row.original.details.length}</div>
+    ),
+  },
+  {
+    header: "Amount",
+    cell: ({ row }) => (
+      <div className="text-right">
+        {row.original.details
+          .reduce((total, detail) => total + detail.amount, 0)
+          .toLocaleString("id-ID")}
+      </div>
+    ),
+  },
+  {
     header: "Status",
     accessorKey: "status",
     cell: ({ row }) => <AssetLeaseStatusBadge status={row.original.status} />,

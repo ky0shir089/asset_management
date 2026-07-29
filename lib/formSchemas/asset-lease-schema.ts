@@ -44,10 +44,7 @@ export const assetLeaseSchema = z
     companyId: z.uuid("Company is required"),
     dateStart: z.iso.date("Rent date is required"),
     note: z.string().trim().max(255).optional(),
-    details: z
-      .array(assetLeaseDetailSchema)
-      .min(1, "Add at least one asset")
-      .max(10, "Add at most 10 assets"),
+    details: z.array(assetLeaseDetailSchema).min(1, "Add at least one asset"),
   })
   .superRefine((value, ctx) => {
     const seen = new Set<string>()

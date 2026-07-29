@@ -81,6 +81,8 @@ type PreparedRentDetail = {
   photos: SavedPhoto[]
 }
 
+class AssetLeaseWorkflowError extends Error {}
+
 export async function getAssetCodes(categoryId: string) {
   await requireUser()
   const permission = await authorizeAction("asset-lease:create")
@@ -205,8 +207,8 @@ export async function assetLeaseStore(formData: FormData) {
       return { success: false, message: "Invalid form data" }
     }
 
-    if (!Array.isArray(details) || details.length < 1 || details.length > 10) {
-      return { success: false, message: "Add between 1 and 10 assets" }
+    if (!Array.isArray(details) || details.length < 1) {
+      return { success: false, message: "Add at least one asset" }
     }
 
     const photoGroups = collectPhotoGroups(formData, details.length)
@@ -351,7 +353,7 @@ export async function assetLeaseApprove(id: string, receiveDate: string) {
         where: eq(rentAssets.id, id),
         columns: { id: true, rentDate: true, status: true },
       })
-      if (!existing) throw new Error("Asset lease not found")
+      if (!existing) throw new AssetLeaseWorkflowError("Asset lease not found")
 
       const validation = assetLeaseApproveSchema.safeParse({
         id,
@@ -359,12 +361,14 @@ export async function assetLeaseApprove(id: string, receiveDate: string) {
         receiveDate,
       })
       if (!validation.success) {
-        throw new Error(
+        throw new AssetLeaseWorkflowError(
           validation.error.issues[0]?.message ?? "Invalid receive date"
         )
       }
       if (existing.status !== "NEW") {
-        throw new Error("Only NEW asset leases can be approved")
+        throw new AssetLeaseWorkflowError(
+          "Only NEW asset leases can be approved"
+        )
       }
 
       const leasedAssets = await tx
@@ -373,7 +377,9 @@ export async function assetLeaseApprove(id: string, receiveDate: string) {
         .innerJoin(assetDatas, eq(rentAssetDetails.assetId, assetDatas.id))
         .where(eq(rentAssetDetails.rentAssetId, id))
       const assetIds = [...new Set(leasedAssets.map((asset) => asset.id))]
-      if (!assetIds.length) throw new Error("Asset lease has no details")
+      if (!assetIds.length) {
+        throw new AssetLeaseWorkflowError("Asset lease has no details")
+      }
 
       const [decided] = await tx
         .update(rentAssets)
@@ -385,7 +391,9 @@ export async function assetLeaseApprove(id: string, receiveDate: string) {
         })
         .where(and(eq(rentAssets.id, id), eq(rentAssets.status, "NEW")))
         .returning({ id: rentAssets.id })
-      if (!decided) throw new Error("Asset lease was already decided")
+      if (!decided) {
+        throw new AssetLeaseWorkflowError("Asset lease was already decided")
+      }
 
       const claimed = await tx
         .update(assetDatas)
@@ -404,7 +412,9 @@ export async function assetLeaseApprove(id: string, receiveDate: string) {
           .filter((asset) => !claimedIds.has(asset.id))
           .map((asset) => asset.number)
           .join(", ")
-        throw new Error(`Assets no longer available: ${unavailable}`)
+        throw new AssetLeaseWorkflowError(
+          `Assets no longer available: ${unavailable}`
+        )
       }
     })
 
@@ -412,10 +422,11 @@ export async function assetLeaseApprove(id: string, receiveDate: string) {
     revalidatePath(`/distribution/asset-lease/${id}`)
     return { success: true, message: "Asset lease approved successfully" }
   } catch (error) {
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : "Something went wrong",
+    if (error instanceof AssetLeaseWorkflowError) {
+      return { success: false, message: error.message }
     }
+    console.error("Failed to approve asset lease", error)
+    return { success: false, message: "Failed to approve asset lease" }
   }
 }
 
@@ -455,9 +466,7 @@ export async function assetLeaseReject(id: string, reason: string) {
     revalidatePath(`/distribution/asset-lease/${id}`)
     return { success: true, message: "Asset lease rejected successfully" }
   } catch (error) {
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : "Something went wrong",
-    }
+    console.error("Failed to reject asset lease", error)
+    return { success: false, message: "Failed to reject asset lease" }
   }
 }

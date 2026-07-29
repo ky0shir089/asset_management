@@ -160,7 +160,7 @@ export default function AssetLeaseForm({
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor={field.name}>Rent Date</FieldLabel>
+                  <FieldLabel htmlFor={field.name}>Lease Date</FieldLabel>
                   <Input
                     {...field}
                     id={field.name}
@@ -202,17 +202,11 @@ export default function AssetLeaseForm({
 
       <div className="rounded-lg border p-4">
         <div className="mb-4 flex items-center justify-between gap-4">
-          <div>
-            <h2 className="font-semibold">Lease Details</h2>
-            <p className="text-sm text-muted-foreground">
-              Up to 10 assets per lease.
-            </p>
-          </div>
+          <h2 className="font-semibold">Lease Details</h2>
           <Button
             type="button"
             variant="outline"
             onClick={() => appendDetail(blankDetail())}
-            disabled={detailFields.length >= 10}
           >
             Add Asset
           </Button>

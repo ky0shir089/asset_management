@@ -3,10 +3,15 @@
 import { requireUser } from "@/data/require-user"
 import { db } from "@/drizzle/db"
 import {
+  assetCodes,
   assetDatas,
+  assetSpecs,
   branches,
   companies,
   outlets,
+  poDetails,
+  prDetails,
+  prSpecifications,
   rentAssetDetails,
   rentAssets,
   rentPhotoAssets,
@@ -22,7 +27,7 @@ import {
   saveRentPhotos,
   type SavedPhoto,
 } from "@/lib/local-upload"
-import { and, desc, eq, ilike, inArray, ne, sql } from "drizzle-orm"
+import { and, asc, desc, eq, ilike, inArray, ne, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import z from "zod"
 
@@ -74,6 +79,117 @@ function collectPhotoGroups(formData: FormData, detailCount: number): File[][] {
 type PreparedRentDetail = {
   id: string
   photos: SavedPhoto[]
+}
+
+export async function getAssetCodes(categoryId: string) {
+  await requireUser()
+  const permission = await authorizeAction("asset-lease:create")
+  if (!permission.authorized) return permission.response
+
+  if (!z.uuid().safeParse(categoryId).success) {
+    return { success: false as const, message: "Invalid asset category" }
+  }
+
+  try {
+    const data = await db
+      .selectDistinct({
+        id: assetCodes.id,
+        code: assetCodes.code,
+        name: assetCodes.name,
+      })
+      .from(assetCodes)
+      .innerJoin(prDetails, eq(prDetails.assetCodeId, assetCodes.id))
+      .innerJoin(poDetails, eq(poDetails.prDtlId, prDetails.id))
+      .innerJoin(assetDatas, eq(assetDatas.poDetailId, poDetails.id))
+      .innerJoin(outlets, eq(assetDatas.outletId, outlets.id))
+      .innerJoin(branches, eq(outlets.branchId, branches.id))
+      .innerJoin(companies, eq(branches.companyId, companies.id))
+      .where(
+        and(
+          eq(assetCodes.categoryId, categoryId),
+          eq(assetDatas.status, "TERSEDIA"),
+          eq(companies.code, "LSA")
+        )
+      )
+      .orderBy(asc(assetCodes.code))
+
+    return { success: true as const, data }
+  } catch (error) {
+    return {
+      success: false as const,
+      message: error instanceof Error ? error.message : "Something went wrong",
+    }
+  }
+}
+
+export async function getAssets(codeId: string) {
+  await requireUser()
+  const permission = await authorizeAction("asset-lease:create")
+  if (!permission.authorized) return permission.response
+
+  if (!z.uuid().safeParse(codeId).success) {
+    return { success: false as const, message: "Invalid asset code" }
+  }
+
+  try {
+    const rows = await db
+      .select({
+        id: assetDatas.id,
+        nomorAssets: assetDatas.nomorAssets,
+        condition: assetDatas.condition,
+        specificationName: assetSpecs.name,
+        specificationValue: prSpecifications.specValue,
+      })
+      .from(assetDatas)
+      .innerJoin(poDetails, eq(assetDatas.poDetailId, poDetails.id))
+      .innerJoin(prDetails, eq(poDetails.prDtlId, prDetails.id))
+      .innerJoin(outlets, eq(assetDatas.outletId, outlets.id))
+      .innerJoin(branches, eq(outlets.branchId, branches.id))
+      .innerJoin(companies, eq(branches.companyId, companies.id))
+      .leftJoin(prSpecifications, eq(prSpecifications.prDtlId, prDetails.id))
+      .leftJoin(assetSpecs, eq(prSpecifications.specId, assetSpecs.id))
+      .where(
+        and(
+          eq(prDetails.assetCodeId, codeId),
+          eq(assetDatas.status, "TERSEDIA"),
+          eq(companies.code, "LSA")
+        )
+      )
+      .orderBy(asc(assetDatas.nomorAssets))
+
+    const assets = new Map<
+      string,
+      {
+        id: string
+        nomorAssets: string
+        condition: string
+        specifications: Array<{ name: string; value: string | null }>
+      }
+    >()
+
+    for (const row of rows) {
+      const asset = assets.get(row.id) ?? {
+        id: row.id,
+        nomorAssets: row.nomorAssets,
+        condition: row.condition ?? "",
+        specifications: [],
+      }
+      if (row.specificationName !== null) {
+        asset.specifications.push({
+          name: row.specificationName,
+          value: row.specificationValue,
+        })
+      }
+      assets.set(row.id, asset)
+    }
+
+    return { success: true as const, data: Array.from(assets.values()) }
+  } catch (error) {
+    return {
+      success: false as const,
+      message: error instanceof Error ? error.message : "Something went wrong",
+    }
+  }
 }
 
 export async function assetLeaseStore(formData: FormData) {

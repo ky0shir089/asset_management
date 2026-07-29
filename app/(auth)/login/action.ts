@@ -1,10 +1,13 @@
 "use server"
 
 import { db } from "@/drizzle/db"
-import { sessions, users } from "@/drizzle/schema"
+import { roleUser, sessions, users } from "@/drizzle/schema"
 import { auth } from "@/lib/auth/auth"
 import { env } from "@/lib/env"
-import { signInSchema, type signInSchemaType } from "@/lib/formSchemas/auth-schema"
+import {
+  signInSchema,
+  type signInSchemaType,
+} from "@/lib/formSchemas/auth-schema"
 import { eq } from "drizzle-orm"
 import { createHmac } from "node:crypto"
 import { headers } from "next/headers"
@@ -102,7 +105,7 @@ export async function fetchTalentaIdByEmployeeId(employeeId: string) {
   } catch (error) {
     return {
       success: false,
-      message: 
+      message:
         error instanceof Error
           ? error.message
           : "Failed to fetch Talenta employment info",
@@ -144,7 +147,7 @@ export async function fetchTalentaEmployee(employeeId: number) {
   } catch (error) {
     return {
       success: false,
-      message: 
+      message:
         error instanceof Error
           ? error.message
           : "Failed to fetch Talenta employee info",
@@ -204,6 +207,12 @@ export async function signUp(username: string): Promise<LoginActionResult> {
       },
     })
 
+    await db.insert(roleUser).values({
+      userId: data.user.id,
+      roleId: "3b65806f-f6b9-489e-89fb-d3ea99186f30",
+      createdBy: data.user.id,
+    })
+
     if (!data) {
       return {
         success: false,
@@ -255,16 +264,6 @@ export async function signIn(
       }
     }
 
-    const requestHeaders = await headers()
-
-    await db
-      .update(sessions)
-      .set({
-        ipAddress: getClientIp(requestHeaders),
-        userAgent: requestHeaders.get("user-agent"),
-      })
-      .where(eq(sessions.token, data.token))
-
     const result = await talentaService(username)
 
     if (!result.success) {
@@ -282,6 +281,20 @@ export async function signIn(
         message: "Employee has resigned",
       }
     }
+
+    const requestHeaders = await headers()
+
+    await db
+      .update(sessions)
+      .set({
+        ipAddress: getClientIp(requestHeaders),
+        userAgent: requestHeaders.get("user-agent"),
+        companyId: employee.employment.branch_id,
+        companyName: employee.employment.branch,
+        branchId: employee.employment.organization_id,
+        branchName: employee.employment.organization_name,
+      })
+      .where(eq(sessions.token, data.token))
 
     return {
       success: true,

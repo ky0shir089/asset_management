@@ -8,6 +8,7 @@ import {
   serial,
   uuid,
   jsonb,
+  varchar,
 } from "drizzle-orm/pg-core"
 import { roles } from "./role"
 
@@ -45,6 +46,10 @@ export const sessions = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     permissions: jsonb("permissions").$type<string[]>().default([]),
+    companyId: varchar("company_id", { length: 255 }),
+    companyName: varchar("company_name", { length: 255 }),
+    branchId: varchar("branch_id", { length: 255 }),
+    branchName: varchar("branch_name", { length: 255 }),
   },
   (table) => [index("sessions_userId_idx").on(table.userId)]
 )

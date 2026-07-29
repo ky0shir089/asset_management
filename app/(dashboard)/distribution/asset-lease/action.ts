@@ -115,10 +115,8 @@ export async function getAssetCodes(categoryId: string) {
 
     return { success: true as const, data }
   } catch (error) {
-    return {
-      success: false as const,
-      message: error instanceof Error ? error.message : "Something went wrong",
-    }
+    console.error("Failed to load asset codes", error)
+    return { success: false as const, message: "Failed to load asset codes" }
   }
 }
 
@@ -185,10 +183,8 @@ export async function getAssets(codeId: string) {
 
     return { success: true as const, data: Array.from(assets.values()) }
   } catch (error) {
-    return {
-      success: false as const,
-      message: error instanceof Error ? error.message : "Something went wrong",
-    }
+    console.error("Failed to load assets", error)
+    return { success: false as const, message: "Failed to load assets" }
   }
 }
 

@@ -9,10 +9,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { assetLeaseShow } from "@/data/asset-lease"
-import Image from "next/image"
 import Link from "next/link"
 import type { ReactNode } from "react"
 import AssetLeaseDecisionActions from "../_components/AssetLeaseDecisionActions"
+import AssetLeasePhotoCarousel from "../_components/AssetLeasePhotoCarousel"
 import AssetLeaseStatusBadge from "../_components/AssetLeaseStatusBadge"
 
 type Params = Promise<{ rentId: string }>
@@ -114,9 +114,6 @@ export default async function AssetLeaseDetailPage({
 
         <section>
           <h2 className="mb-3 font-semibold">Lease Details</h2>
-          <span id="asset-lease-photo-new-tab" className="sr-only">
-            Photo links open in a new tab.
-          </span>
           <div className="overflow-x-auto rounded-md border">
             <Table className="min-w-3xl">
               <TableHeader>
@@ -144,31 +141,7 @@ export default async function AssetLeaseDetailPage({
                         {(detail.amount ?? 0).toLocaleString("id-ID")}
                       </TableCell>
                       <TableCell>
-                        <div className="flex min-w-36 flex-wrap gap-2">
-                          {detail.photos.length ? (
-                            detail.photos.map((photo) => (
-                              <a
-                                key={photo.id}
-                                href={photo.path}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                aria-label={`Open ${photo.name}`}
-                                aria-describedby="asset-lease-photo-new-tab"
-                                className="block rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
-                              >
-                                <Image
-                                  src={photo.path}
-                                  alt={photo.name}
-                                  width={56}
-                                  height={56}
-                                  className="size-14 rounded-md border object-cover"
-                                />
-                              </a>
-                            ))
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </div>
+                        <AssetLeasePhotoCarousel photos={detail.photos} />
                       </TableCell>
                     </TableRow>
                   ))

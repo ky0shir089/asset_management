@@ -1,0 +1,2 @@
+ALTER TABLE "rent_photo_assets" ALTER COLUMN "rent_dtl_id" DROP NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "asset_transfers_one_pending_per_asset_idx" ON "asset_transfers" USING btree ("asset_id") WHERE "asset_transfers"."status" = 'PENDING';

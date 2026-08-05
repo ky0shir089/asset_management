@@ -1,5 +1,6 @@
 "use client"
 
+import AssetLeasePhotoInput from "@/components/asset-lease-photo-input"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -12,9 +13,17 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   assetLeaseApproveSchema,
+  assetLeaseRejectReasons,
   assetLeaseRejectSchema,
 } from "@/lib/formSchemas/asset-lease-schema"
 import { useRouter } from "next/navigation"
@@ -27,6 +36,65 @@ interface AssetLeaseDecisionActionsProps {
   status: string
   rentDate: string
   defaultReceiveDate: string
+  details: Array<{ id: string; assetNumber: string; assetName: string }>
+}
+
+function EvidenceFields({
+  prefix,
+  details,
+  photos,
+  errors,
+  onChange,
+  disabled,
+}: {
+  prefix: string
+  details: AssetLeaseDecisionActionsProps["details"]
+  photos: Record<string, File[]>
+  errors: Record<string, string>
+  onChange: (detailId: string, files: File[]) => void
+  disabled: boolean
+}) {
+  return (
+    <section className="space-y-3" aria-labelledby={`${prefix}-evidence-title`}>
+      <div>
+        <h3 id={`${prefix}-evidence-title`} className="font-medium">
+          Required evidence
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Upload 1–10 photos for every asset, maximum 1 MB each.
+        </p>
+      </div>
+      {details.map((detail) => (
+        <div
+          key={detail.id}
+          className="space-y-2 rounded-lg border p-3"
+          data-invalid={Boolean(errors[detail.id])}
+        >
+          <div>
+            <p className="font-medium">{detail.assetNumber}</p>
+            <p className="text-sm text-muted-foreground">{detail.assetName}</p>
+          </div>
+          <Label htmlFor={`${prefix}-photos-${detail.id}`}>Photos</Label>
+          <AssetLeasePhotoInput
+            id={`${prefix}-photos-${detail.id}`}
+            files={photos[detail.id] ?? []}
+            onChange={(files) => onChange(detail.id, files)}
+            describedBy={`${prefix}-evidence-title ${prefix}-photos-${detail.id}-error`}
+            disabled={disabled}
+          />
+          {errors[detail.id] && (
+            <p
+              id={`${prefix}-photos-${detail.id}-error`}
+              className="text-sm text-destructive"
+              role="alert"
+            >
+              {errors[detail.id]}
+            </p>
+          )}
+        </div>
+      ))}
+    </section>
+  )
 }
 
 export default function AssetLeaseDecisionActions({
@@ -34,6 +102,7 @@ export default function AssetLeaseDecisionActions({
   status,
   rentDate,
   defaultReceiveDate,
+  details,
 }: AssetLeaseDecisionActionsProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -42,6 +111,51 @@ export default function AssetLeaseDecisionActions({
   const [receiveDate, setReceiveDate] = useState(defaultReceiveDate)
   const [reason, setReason] = useState("")
   const [fieldError, setFieldError] = useState<string | null>(null)
+  const [approvePhotos, setApprovePhotos] = useState<Record<string, File[]>>({})
+  const [rejectPhotos, setRejectPhotos] = useState<Record<string, File[]>>({})
+  const [approvePhotoErrors, setApprovePhotoErrors] = useState<
+    Record<string, string>
+  >({})
+  const [rejectPhotoErrors, setRejectPhotoErrors] = useState<
+    Record<string, string>
+  >({})
+
+  function validationErrors(
+    issues: Array<{ path: PropertyKey[]; message: string }>
+  ) {
+    const photoErrors: Record<string, string> = {}
+    let formError: string | null = null
+    for (const issue of issues) {
+      if (issue.path[0] === "details" && typeof issue.path[1] === "number") {
+        const detail = details[issue.path[1]]
+        if (detail) photoErrors[detail.id] ??= issue.message
+      } else {
+        formError ??= issue.message
+      }
+    }
+    return { photoErrors, formError }
+  }
+
+  function decisionDetails(photos: Record<string, File[]>) {
+    return details.map((detail) => ({
+      rentDetailId: detail.id,
+      photos: photos[detail.id] ?? [],
+    }))
+  }
+
+  function decisionFormData(
+    photos: Record<string, File[]>,
+    values: Record<string, string>
+  ) {
+    const formData = new FormData()
+    Object.entries(values).forEach(([key, value]) => formData.set(key, value))
+    details.forEach((detail) =>
+      (photos[detail.id] ?? []).forEach((photo) =>
+        formData.append(`photos-${detail.id}`, photo)
+      )
+    )
+    return formData
+  }
 
   if (status !== "NEW") return null
 
@@ -50,24 +164,29 @@ export default function AssetLeaseDecisionActions({
       id,
       rentDate,
       receiveDate,
+      details: decisionDetails(approvePhotos),
     })
     if (!validation.success) {
-      setFieldError(
-        validation.error.issues[0]?.message ?? "Invalid receive date"
-      )
+      const errors = validationErrors(validation.error.issues)
+      setFieldError(errors.formError)
+      setApprovePhotoErrors(errors.photoErrors)
       return
     }
 
     setFieldError(null)
+    setApprovePhotoErrors({})
     startTransition(async () => {
       try {
-        const result = await assetLeaseApprove(id, receiveDate)
+        const result = await assetLeaseApprove(
+          decisionFormData(approvePhotos, { id, receiveDate })
+        )
         if (!result.success) {
           toast.error(result.message)
           return
         }
 
         toast.success(result.message)
+        setApprovePhotos({})
         setApproveOpen(false)
         router.replace("/distribution/asset-lease")
       } catch (error) {
@@ -79,16 +198,28 @@ export default function AssetLeaseDecisionActions({
   }
 
   function reject() {
-    const validation = assetLeaseRejectSchema.safeParse({ id, reason })
+    const validation = assetLeaseRejectSchema.safeParse({
+      id,
+      reason,
+      details: decisionDetails(rejectPhotos),
+    })
     if (!validation.success) {
-      setFieldError(validation.error.issues[0]?.message ?? "Invalid rejection")
+      const errors = validationErrors(validation.error.issues)
+      setFieldError(errors.formError)
+      setRejectPhotoErrors(errors.photoErrors)
       return
     }
 
     setFieldError(null)
+    setRejectPhotoErrors({})
     startTransition(async () => {
       try {
-        const result = await assetLeaseReject(id, validation.data.reason)
+        const result = await assetLeaseReject(
+          decisionFormData(rejectPhotos, {
+            id,
+            reason: validation.data.reason,
+          })
+        )
         if (!result.success) {
           toast.error(result.message)
           return
@@ -96,6 +227,7 @@ export default function AssetLeaseDecisionActions({
 
         toast.success(result.message)
         setReason("")
+        setRejectPhotos({})
         setRejectOpen(false)
         router.replace("/distribution/asset-lease")
       } catch (error) {
@@ -112,7 +244,10 @@ export default function AssetLeaseDecisionActions({
         open={rejectOpen}
         onOpenChange={(open) => {
           if (isPending && !open) return
-          if (open) setFieldError(null)
+          if (open) {
+            setFieldError(null)
+            setRejectPhotoErrors({})
+          }
           setRejectOpen(open)
         }}
       >
@@ -128,7 +263,10 @@ export default function AssetLeaseDecisionActions({
         >
           Reject
         </DialogTrigger>
-        <DialogContent showCloseButton={!isPending}>
+        <DialogContent
+          showCloseButton={!isPending}
+          className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl"
+        >
           <form
             onSubmit={(event) => {
               event.preventDefault()
@@ -141,7 +279,7 @@ export default function AssetLeaseDecisionActions({
             <DialogHeader>
               <DialogTitle>Reject asset lease</DialogTitle>
               <DialogDescription>
-                Enter reason for rejecting this asset lease.
+                Select a reason for rejecting this asset lease.
               </DialogDescription>
             </DialogHeader>
 
@@ -149,39 +287,63 @@ export default function AssetLeaseDecisionActions({
               <Label htmlFor="asset-lease-rejection-reason">
                 Rejection reason
               </Label>
-              <Textarea
-                id="asset-lease-rejection-reason"
-                value={reason}
-                onChange={(event) => {
-                  setReason(event.target.value)
+              <Select
+                value={reason || null}
+                onValueChange={(value) => {
+                  setReason(value ?? "")
                   setFieldError(null)
                 }}
-                aria-invalid={Boolean(fieldError)}
-                aria-describedby={
-                  fieldError
-                    ? "asset-lease-rejection-error asset-lease-rejection-count"
-                    : "asset-lease-rejection-count"
-                }
-                maxLength={255}
                 disabled={isPending}
                 required
-              />
-              <div className="flex justify-between gap-2 text-sm">
+              >
+                <SelectTrigger
+                  id="asset-lease-rejection-reason"
+                  className="w-full"
+                  aria-invalid={Boolean(fieldError)}
+                  aria-describedby={
+                    fieldError ? "asset-lease-rejection-error" : undefined
+                  }
+                >
+                  <SelectValue placeholder="Select rejection reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {assetLeaseRejectReasons.map((rejectReason) => (
+                      <SelectItem key={rejectReason} value={rejectReason}>
+                        {rejectReason}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              {fieldError && (
                 <p
                   id="asset-lease-rejection-error"
-                  className="text-destructive"
-                  role={fieldError ? "alert" : undefined}
+                  className="text-sm text-destructive"
+                  role="alert"
                 >
-                  {fieldError ?? ""}
+                  {fieldError}
                 </p>
-                <p
-                  id="asset-lease-rejection-count"
-                  className="text-muted-foreground"
-                >
-                  {reason.length}/255
-                </p>
-              </div>
+              )}
             </div>
+
+            <EvidenceFields
+              prefix="reject"
+              details={details}
+              photos={rejectPhotos}
+              errors={rejectPhotoErrors}
+              onChange={(detailId, files) => {
+                setRejectPhotos((current) => ({
+                  ...current,
+                  [detailId]: files,
+                }))
+                setRejectPhotoErrors((current) => ({
+                  ...current,
+                  [detailId]: "",
+                }))
+              }}
+              disabled={isPending}
+            />
 
             <DialogFooter>
               <Button
@@ -209,7 +371,10 @@ export default function AssetLeaseDecisionActions({
         open={approveOpen}
         onOpenChange={(open) => {
           if (isPending && !open) return
-          if (open) setFieldError(null)
+          if (open) {
+            setFieldError(null)
+            setApprovePhotoErrors({})
+          }
           setApproveOpen(open)
         }}
       >
@@ -218,7 +383,10 @@ export default function AssetLeaseDecisionActions({
         >
           Approve
         </DialogTrigger>
-        <DialogContent showCloseButton={!isPending}>
+        <DialogContent
+          showCloseButton={!isPending}
+          className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl"
+        >
           <form
             onSubmit={(event) => {
               event.preventDefault()
@@ -263,6 +431,24 @@ export default function AssetLeaseDecisionActions({
                 </p>
               )}
             </div>
+
+            <EvidenceFields
+              prefix="approve"
+              details={details}
+              photos={approvePhotos}
+              errors={approvePhotoErrors}
+              onChange={(detailId, files) => {
+                setApprovePhotos((current) => ({
+                  ...current,
+                  [detailId]: files,
+                }))
+                setApprovePhotoErrors((current) => ({
+                  ...current,
+                  [detailId]: "",
+                }))
+              }}
+              disabled={isPending}
+            />
 
             <DialogFooter>
               <Button

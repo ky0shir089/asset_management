@@ -1,8 +1,9 @@
-import { relations } from "drizzle-orm"
+import { relations, sql } from "drizzle-orm"
 import {
   date,
   index,
   integer,
+  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -63,44 +64,83 @@ export const rentAssetDetails = pgTable("rent_asset_details", {
   updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 })
 
-export const rentPhotoAssets = pgTable("rent_photo_assets", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  rentDtlId: uuid("rent_dtl_id")
-    .notNull()
-    .references(() => rentAssetDetails.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  path: varchar("path", { length: 255 }).notNull(),
-  createdBy: text("created_by")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  updatedBy: text("updated_by").references(() => users.id, {
-    onDelete: "cascade",
-  }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
-})
+export const rentPhotoTypeEnum = pgEnum("rent_photo_type", [
+  "BEFORE",
+  "APPROVE",
+  "REJECT",
+  "RECEIVE",
+  "RETURN",
+])
 
-export const assetTransfers = pgTable("asset_transfers", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  transferDate: date("transfer_date").notNull(),
-  assetId: uuid("asset_id")
-    .notNull()
-    .references(() => assetDatas.id, { onDelete: "cascade" }),
-  outletId: uuid("outlet_id")
-    .notNull()
-    .references(() => outlets.id, { onDelete: "cascade" }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  createdBy: text("created_by")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  updatedBy: text("updated_by").references(() => users.id, {
-    onDelete: "cascade",
-  }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
-})
+export const assetTransferStatusEnum = pgEnum("asset_transfer_status", [
+  "PENDING",
+  "RECEIVED",
+])
+
+export const assetTransfers = pgTable(
+  "asset_transfers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    rentDtlId: uuid("rent_dtl_id").references(() => rentAssetDetails.id, {
+      onDelete: "cascade",
+    }),
+    transferDate: date("transfer_date").notNull(),
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => assetDatas.id, { onDelete: "cascade" }),
+    outletId: uuid("outlet_id")
+      .notNull()
+      .references(() => outlets.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: assetTransferStatusEnum("status").notNull(),
+    receivedAt: timestamp("received_at"),
+    receivedBy: text("received_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    updatedBy: text("updated_by").references(() => users.id, {
+      onDelete: "cascade",
+    }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("asset_transfers_status_user_id_idx").on(table.status, table.userId),
+    index("asset_transfers_rent_dtl_id_idx").on(table.rentDtlId),
+    uniqueIndex("asset_transfers_one_pending_per_asset_idx")
+      .on(table.assetId)
+      .where(sql`${table.status} = 'PENDING'`),
+  ]
+)
+
+export const rentPhotoAssets = pgTable(
+  "rent_photo_assets",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    rentDtlId: uuid("rent_dtl_id").references(() => rentAssetDetails.id, {
+      onDelete: "cascade",
+    }),
+    transferId: uuid("transfer_id").references(() => assetTransfers.id, {
+      onDelete: "set null",
+    }),
+    name: varchar("name", { length: 255 }).notNull(),
+    path: varchar("path", { length: 255 }).notNull(),
+    type: rentPhotoTypeEnum("type").notNull(),
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    updatedBy: text("updated_by").references(() => users.id, {
+      onDelete: "cascade",
+    }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+  },
+  (table) => [index("rent_photo_assets_transfer_id_idx").on(table.transferId)]
+)
 
 export const rentAssetsRelations = relations(rentAssets, ({ one, many }) => ({
   company: one(companies, {
@@ -125,12 +165,31 @@ export const rentAssetDetailsRelations = relations(
   })
 )
 
+export const assetTransfersRelations = relations(assetTransfers, ({ one }) => ({
+  detail: one(rentAssetDetails, {
+    fields: [assetTransfers.rentDtlId],
+    references: [rentAssetDetails.id],
+  }),
+  asset: one(assetDatas, {
+    fields: [assetTransfers.assetId],
+    references: [assetDatas.id],
+  }),
+  outlet: one(outlets, {
+    fields: [assetTransfers.outletId],
+    references: [outlets.id],
+  }),
+}))
+
 export const rentPhotoAssetsRelations = relations(
   rentPhotoAssets,
   ({ one }) => ({
     detail: one(rentAssetDetails, {
       fields: [rentPhotoAssets.rentDtlId],
       references: [rentAssetDetails.id],
+    }),
+    transfer: one(assetTransfers, {
+      fields: [rentPhotoAssets.transferId],
+      references: [assetTransfers.id],
     }),
   })
 )

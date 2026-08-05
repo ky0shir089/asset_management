@@ -7,7 +7,7 @@ import z from "zod"
 
 const acceptedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"])
 
-const photoFilesSchema = z
+export const rentPhotoFilesSchema = z
   .array(z.instanceof(File))
   .min(1, "Photos are required for each asset")
   .max(
@@ -36,7 +36,7 @@ const photoFilesSchema = z
 const assetLeaseDetailSchema = z.object({
   assetId: z.uuid("Asset is required"),
   amount: z.number().int().min(0, "Amount cannot be negative"),
-  photos: photoFilesSchema,
+  photos: rentPhotoFilesSchema,
 })
 
 export const assetLeaseSchema = z
@@ -60,11 +60,19 @@ export const assetLeaseSchema = z
     })
   })
 
+const assetLeaseDecisionDetailSchema = z.object({
+  rentDetailId: z.uuid("Leased asset not found"),
+  photos: rentPhotoFilesSchema,
+})
+
 export const assetLeaseApproveSchema = z
   .object({
     id: z.uuid("Asset lease not found"),
     rentDate: z.iso.date("Invalid rent date"),
     receiveDate: z.iso.date("Receive date is required"),
+    details: z
+      .array(assetLeaseDecisionDetailSchema)
+      .min(1, "Asset lease has no details"),
   })
   .superRefine((value, ctx) => {
     if (value.receiveDate < value.rentDate) {
@@ -76,13 +84,22 @@ export const assetLeaseApproveSchema = z
     }
   })
 
+export const assetLeaseRejectReasons = [
+  "Spesifikasi asset tidak sesuai",
+  "Kondisi asset rusak / tidak sesuai",
+  "Tidak jadi dibutuhkan / salah company",
+] as const
+
 export const assetLeaseRejectSchema = z.object({
   id: z.uuid("Asset lease not found"),
-  reason: z
-    .string()
-    .trim()
-    .min(1, "Reason is required")
-    .max(255, "Reason must be at most 255 characters"),
+  reason: z.enum(assetLeaseRejectReasons, "Select a valid rejection reason"),
+  details: z
+    .array(assetLeaseDecisionDetailSchema)
+    .min(1, "Asset lease has no details"),
 })
+
+export type assetLeaseDecisionDetailType = z.infer<
+  typeof assetLeaseDecisionDetailSchema
+>
 
 export type assetLeaseSchemaType = z.infer<typeof assetLeaseSchema>

@@ -19,8 +19,10 @@ type Photo = {
 
 export default function AssetLeasePhotoCarousel({
   photos,
+  label,
 }: {
   photos: Photo[]
+  label?: string
 }) {
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
@@ -37,7 +39,7 @@ export default function AssetLeasePhotoCarousel({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <div className="flex min-w-36 flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 min-w-36">
         {photos.map((photo, index) => (
           <DialogTrigger
             key={photo.id}
@@ -45,8 +47,12 @@ export default function AssetLeasePhotoCarousel({
               <button
                 type="button"
                 onClick={() => setActiveIndex(index)}
-                aria-label={`Preview ${photo.name}`}
-                className="block cursor-pointer rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
+                aria-label={
+                  label
+                    ? `Preview ${label}, photo ${index + 1} of ${photos.length}`
+                    : `Preview ${photo.name}`
+                }
+                className="block rounded-md cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
               />
             }
           >
@@ -55,14 +61,15 @@ export default function AssetLeasePhotoCarousel({
               alt=""
               width={56}
               height={56}
-              className="size-14 rounded-md border object-cover"
+              sizes="56px"
+              className="object-cover border rounded-md size-14"
             />
           </DialogTrigger>
         ))}
       </div>
 
       <DialogContent
-        className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-4xl gap-3 overflow-y-auto"
+        className="max-h-[calc(100dvh-2rem)] w-fit max-w-[calc(100%-2rem)] gap-3 overflow-y-auto sm:max-w-[calc(100%-2rem)]"
         onKeyDown={(event) => {
           if (event.key === "ArrowLeft") {
             event.preventDefault()
@@ -73,16 +80,21 @@ export default function AssetLeasePhotoCarousel({
           }
         }}
       >
-        <DialogTitle className="pr-10">{activePhoto.name}</DialogTitle>
-        <div className="relative h-[70vh] min-h-64 w-full">
-          <Image
-            src={activePhoto.path}
-            alt={activePhoto.name}
-            fill
-            sizes="(max-width: 640px) calc(100vw - 2rem), 896px"
-            className="object-contain"
-          />
-        </div>
+        <DialogTitle className="pr-10">
+          {label
+            ? `${label}, photo ${safeIndex + 1} of ${photos.length}`
+            : activePhoto.name}
+        </DialogTitle>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={activePhoto.path}
+          alt={
+            label
+              ? `${label}, photo ${safeIndex + 1} of ${photos.length}`
+              : activePhoto.name
+          }
+          className="max-h-[70vh] max-w-[calc(100vw-4rem)] object-contain"
+        />
         <div className="flex items-center justify-center gap-3">
           {photos.length > 1 && (
             <Button
@@ -96,7 +108,7 @@ export default function AssetLeasePhotoCarousel({
             </Button>
           )}
           <span
-            className="min-w-16 text-center text-sm text-muted-foreground"
+            className="text-sm text-center min-w-16 text-muted-foreground"
             aria-live="polite"
             aria-atomic="true"
           >

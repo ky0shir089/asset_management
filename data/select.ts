@@ -64,6 +64,7 @@ export async function companyOptions() {
   return db.query.companies.findMany({
     columns: {
       id: true,
+      talentaCompanyId: true,
       code: true,
     },
     where: eq(companies.isActive, true),
@@ -79,6 +80,7 @@ export async function branchOptions() {
   return db.query.branches.findMany({
     columns: {
       id: true,
+      branchId: true,
       name: true,
     },
     where: eq(branches.isActive, true),
@@ -358,6 +360,15 @@ export async function outletOptions() {
           companyId: true,
           name: true,
         },
+        with: {
+          company: {
+            columns: {
+              id: true,
+              code: true,
+              name: true,
+            },
+          },
+        },
       },
     },
     orderBy: (outlets, { asc }) => [asc(outlets.name)],
@@ -388,8 +399,8 @@ export async function assetLeaseAssetOptions() {
   const lsaOutletIds = db
     .select({ id: outlets.id })
     .from(outlets)
-    .innerJoin(branches, eq(outlets.branchId, branches.id))
-    .innerJoin(companies, eq(branches.companyId, companies.id))
+    .innerJoin(branches, eq(outlets.branchId, branches.branchId))
+    .innerJoin(companies, eq(branches.companyId, companies.talentaCompanyId))
     .where(eq(companies.code, "LSA"))
 
   const rows = await db.query.assetDatas.findMany({

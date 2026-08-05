@@ -1,7 +1,7 @@
 import z from "zod"
 
 export const outletSchema = z.object({
-  branchId: z.uuid(),
+  branchId: z.string().min(5),
   outletId: z.string().min(5),
   name: z.string().min(1),
   isActive: z.boolean(),

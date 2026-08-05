@@ -1,5 +1,6 @@
 import {
   boolean,
+  integer,
   pgTable,
   text,
   timestamp,
@@ -11,6 +12,7 @@ import { relations } from "drizzle-orm"
 
 export const companies = pgTable("companies", {
   id: uuid("id").defaultRandom().primaryKey(),
+  talentaCompanyId: integer("talenta_company_id").default(0).unique(),
   name: varchar("name", { length: 255 }).notNull(),
   code: varchar("code", { length: 255 }).notNull(),
   isActive: boolean("is_active").default(true),
@@ -26,10 +28,10 @@ export const companies = pgTable("companies", {
 
 export const branches = pgTable("branches", {
   id: uuid("id").defaultRandom().primaryKey(),
-  companyId: uuid("company_id")
+  companyId: integer("company_id")
     .notNull()
-    .references(() => companies.id, { onDelete: "cascade" }),
-  branchId: varchar("branch_id", { length: 255 }).notNull(),
+    .references(() => companies.talentaCompanyId, { onDelete: "cascade" }),
+  branchId: varchar("branch_id", { length: 255 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   isActive: boolean("is_active").default(true),
   createdBy: text("created_by")
@@ -44,10 +46,10 @@ export const branches = pgTable("branches", {
 
 export const outlets = pgTable("outlets", {
   id: uuid("id").defaultRandom().primaryKey(),
-  branchId: uuid("branchId")
+  branchId: varchar("branchId")
     .notNull()
-    .references(() => branches.id, { onDelete: "cascade" }),
-  outletId: varchar("outlet_id", { length: 255 }).notNull(),
+    .references(() => branches.branchId, { onDelete: "cascade" }),
+  outletId: varchar("outlet_id", { length: 255 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   isActive: boolean("is_active").default(true),
   createdBy: text("created_by")
@@ -67,7 +69,7 @@ export const companyRelations = relations(companies, ({ many }) => ({
 export const branchRelations = relations(branches, ({ one, many }) => ({
   company: one(companies, {
     fields: [branches.companyId],
-    references: [companies.id],
+    references: [companies.talentaCompanyId],
   }),
   outlets: many(outlets),
 }))
@@ -75,6 +77,6 @@ export const branchRelations = relations(branches, ({ one, many }) => ({
 export const outletRelations = relations(outlets, ({ one }) => ({
   branch: one(branches, {
     fields: [outlets.branchId],
-    references: [branches.id],
+    references: [branches.branchId],
   }),
 }))

@@ -154,6 +154,11 @@ export async function receivedAssetStore(formData: FormData) {
       with: {
         branch: {
           columns: { companyId: true },
+          with: {
+            company: {
+              columns: { id: true },
+            },
+          },
         },
       },
     })
@@ -161,7 +166,7 @@ export async function receivedAssetStore(formData: FormData) {
       return { success: false, message: "Outlet not found" }
     }
     const prCompanyId = pod.purchaseOrder.purchaseRequest.companyId
-    if (outlet.branch.companyId !== prCompanyId) {
+    if (outlet.branch.company.id !== prCompanyId) {
       return {
         success: false,
         message:

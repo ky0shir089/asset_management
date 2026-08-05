@@ -120,6 +120,34 @@
       "when": 1785226689414,
       "tag": "0016_asset_lease_company_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1785388996632,
+      "tag": "0017_sudden_blink",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1785749359490,
+      "tag": "0018_hot_red_shift",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1785754988049,
+      "tag": "0019_mushy_kylun",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1785901760165,
+      "tag": "0020_handy_thaddeus_ross",
+      "breakpoints": true
     }
   ]
 }

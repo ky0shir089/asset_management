@@ -28,6 +28,10 @@ export const users = pgTable("users", {
   phoneNumber: text("phone_number").unique(),
   phoneNumberVerified: boolean("phone_number_verified"),
   changePassword: boolean("change_password").default(true),
+  companyId: varchar("company_id", { length: 255 }),
+  companyName: varchar("company_name", { length: 255 }),
+  branchId: varchar("branch_id", { length: 255 }),
+  branchName: varchar("branch_name", { length: 255 }),
 })
 
 export const sessions = pgTable(
@@ -46,10 +50,6 @@ export const sessions = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     permissions: jsonb("permissions").$type<string[]>().default([]),
-    companyId: varchar("company_id", { length: 255 }),
-    companyName: varchar("company_name", { length: 255 }),
-    branchId: varchar("branch_id", { length: 255 }),
-    branchName: varchar("branch_name", { length: 255 }),
   },
   (table) => [index("sessions_userId_idx").on(table.userId)]
 )
@@ -110,9 +110,7 @@ export const roleUser = pgTable("role_user", {
     onDelete: "cascade",
   }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").$onUpdate(
-    () => /* @__PURE__ */ new Date()
-  ),
+  updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 })
 
 export const usersRelations = relations(users, ({ many }) => ({

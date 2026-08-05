@@ -30,6 +30,7 @@ import {
   Landmark,
   MonitorCog,
   MonitorSmartphone,
+  Truck,
   type LucideIcon,
 } from "lucide-react"
 import Link from "next/link"
@@ -40,6 +41,7 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   monitorcog: MonitorCog,
   landmark: Landmark,
   monitorsmartphone: MonitorSmartphone,
+  truck: Truck,
 }
 
 function getModuleIcon(icon: string) {
@@ -65,7 +67,8 @@ function AppSidebarModule({
   )
   const [open, setOpen] = React.useState(hasActiveMenu)
 
-  const [prevHasActiveMenu, setPrevHasActiveMenu] = React.useState(hasActiveMenu)
+  const [prevHasActiveMenu, setPrevHasActiveMenu] =
+    React.useState(hasActiveMenu)
   if (hasActiveMenu !== prevHasActiveMenu) {
     setPrevHasActiveMenu(hasActiveMenu)
     if (hasActiveMenu) {
@@ -74,7 +77,11 @@ function AppSidebarModule({
   }
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="group/collapsible">
+    <Collapsible
+      open={open}
+      onOpenChange={setOpen}
+      className="group/collapsible"
+    >
       <SidebarMenuItem>
         <SidebarMenuButton render={<CollapsibleTrigger />}>
           {React.createElement(moduleIcon, { className: "size-4 shrink-0" })}
@@ -134,21 +141,15 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          {navMain.length ? (
-            <SidebarMenu>
-              {navMain.map((module) => (
-                <AppSidebarModule
-                  key={module.id}
-                  module={module}
-                  pathname={pathname}
-                />
-              ))}
-            </SidebarMenu>
-          ) : (
-            <p className="px-2 text-sm text-muted-foreground">
-              No menu available
-            </p>
-          )}
+          <SidebarMenu>
+            {navMain.map((module) => (
+              <AppSidebarModule
+                key={module.id}
+                module={module}
+                pathname={pathname}
+              />
+            ))}
+          </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>

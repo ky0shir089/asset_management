@@ -1,5 +1,5 @@
 import { writeFile, mkdir, rm } from "node:fs/promises"
-import { join } from "node:path"
+import { basename, join } from "node:path"
 import { randomUUID } from "node:crypto"
 import QRCode from "qrcode"
 
@@ -152,9 +152,22 @@ export async function saveRentPhotos(
 
     return results
   } catch (err) {
-    await rm(dir, { recursive: true, force: true })
+    await cleanupRentPhotos(results)
     throw err
   }
+}
+
+export async function cleanupRentPhotos(photos: SavedPhoto[]): Promise<void> {
+  await Promise.all(
+    photos.map((photo) => {
+      const filename = basename(photo.path)
+      const rentDtlId = photo.path.split("/")[3]
+      if (!rentDtlId || !filename) return Promise.resolve()
+      return rm(join(RENT_UPLOAD_BASE, rentDtlId, "photos", filename), {
+        force: true,
+      })
+    })
+  )
 }
 
 /**

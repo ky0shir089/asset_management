@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/drizzle/db"
-import { roleUser, sessions, users } from "@/drizzle/schema"
+import { branches, outlets, roleUser, sessions, users } from "@/drizzle/schema"
 import { auth } from "@/lib/auth/auth"
 import { env } from "@/lib/env"
 import {
@@ -155,6 +155,44 @@ export async function fetchTalentaEmployee(employeeId: number) {
   }
 }
 
+export async function fetchTalentaBranch(branchId: string) {
+  try {
+    const method = "GET"
+    const path = `/v2/talenta/v3/company/branch/${branchId}`
+    const headers = {
+      "X-Idempotency-Key": "1234",
+    }
+
+    const options = {
+      method: method,
+      headers: { ...generate_headers(method, path), ...headers },
+    }
+
+    const response = await fetch(`${env.MEKARI_API_BASE_URL}${path}`, options)
+    const payload = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: payload.message ?? "Failed to fetch Talenta branch info",
+      }
+    }
+
+    return {
+      success: true,
+      data: payload.data,
+    }
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch Talenta branch info",
+    }
+  }
+}
+
 export async function talentaService(username: string) {
   const employeeRes = await fetchTalentaIdByEmployeeId(username)
 
@@ -172,6 +210,42 @@ export async function talentaService(username: string) {
   return {
     success: true,
     data: employmentRes.data.employee,
+  }
+}
+
+export async function networkService(branchId: string, userId: string) {
+  const branchRes = await fetchTalentaBranch(branchId)
+
+  if (!branchRes.success) {
+    return branchRes
+  }
+
+  const parentBranchId = branchRes.data.parent_branch_id
+  const branchName =
+    parentBranchId == 0
+      ? branchRes.data.name
+      : branchRes.data.name.split(" - ")[1]
+
+  const [data] = await db
+    .insert(branches)
+    .values({
+      companyId: parentBranchId == 0 ? branchId : parentBranchId,
+      branchId,
+      name: branchName,
+      createdBy: userId,
+    })
+    .onConflictDoUpdate({
+      target: [branches.branchId],
+      set: {
+        name: branchName,
+        updatedBy: userId,
+      },
+    })
+    .returning({ id: branches.branchId })
+
+  return {
+    success: true,
+    data: data,
   }
 }
 
@@ -207,18 +281,54 @@ export async function signUp(username: string): Promise<LoginActionResult> {
       },
     })
 
-    await db.insert(roleUser).values({
-      userId: data.user.id,
-      roleId: "3b65806f-f6b9-489e-89fb-d3ea99186f30",
-      createdBy: data.user.id,
-    })
+    const requestHeaders = await headers()
 
-    if (!data) {
-      return {
-        success: false,
-        message: "Failed to sign up",
-      }
-    }
+    await db.transaction(async (tx) => {
+      await tx.insert(roleUser).values({
+        userId: data.user.id,
+        roleId: "3b65806f-f6b9-489e-89fb-d3ea99186f30",
+        createdBy: data.user.id,
+      })
+
+      await tx
+        .update(sessions)
+        .set({
+          ipAddress: getClientIp(requestHeaders),
+          userAgent: requestHeaders.get("user-agent"),
+        })
+        .where(eq(sessions.userId, data.user.id))
+
+      await tx
+        .update(users)
+        .set({
+          companyId: employee.employment.branch_id,
+          companyName: employee.employment.branch,
+          branchId: employee.employment.organization_id,
+          branchName: employee.employment.organization_name,
+        })
+        .where(eq(users.id, data.user.id))
+
+      const branch = await networkService(
+        employee.employment.branch_id,
+        data.user.id
+      )
+
+      await tx
+        .insert(outlets)
+        .values({
+          branchId: branch.data.id,
+          outletId: employee.employment.organization_id,
+          name: employee.employment.organization_name,
+          createdBy: data.user.id,
+        })
+        .onConflictDoUpdate({
+          target: [outlets.outletId],
+          set: {
+            name: employee.employment.organization_name,
+            updatedBy: data.user.id,
+          },
+        })
+    })
 
     return {
       success: true,
@@ -267,6 +377,7 @@ export async function signIn(
     const result = await talentaService(username)
 
     if (!result.success) {
+      await db.delete(sessions).where(eq(sessions.token, data.token))
       return {
         success: false,
         message: result.message,
@@ -276,6 +387,7 @@ export async function signIn(
     const employee = result.data
 
     if (employee.employment.status === "Resigned") {
+      await db.delete(sessions).where(eq(sessions.token, data.token))
       return {
         success: false,
         message: "Employee has resigned",
@@ -284,17 +396,46 @@ export async function signIn(
 
     const requestHeaders = await headers()
 
-    await db
-      .update(sessions)
-      .set({
-        ipAddress: getClientIp(requestHeaders),
-        userAgent: requestHeaders.get("user-agent"),
-        companyId: employee.employment.branch_id,
-        companyName: employee.employment.branch,
-        branchId: employee.employment.organization_id,
-        branchName: employee.employment.organization_name,
-      })
-      .where(eq(sessions.token, data.token))
+    await db.transaction(async (tx) => {
+      await tx
+        .update(sessions)
+        .set({
+          ipAddress: getClientIp(requestHeaders),
+          userAgent: requestHeaders.get("user-agent"),
+        })
+        .where(eq(sessions.token, data.token))
+
+      await tx
+        .update(users)
+        .set({
+          companyId: employee.employment.branch_id,
+          companyName: employee.employment.branch,
+          branchId: employee.employment.organization_id,
+          branchName: employee.employment.organization_name,
+        })
+        .where(eq(users.id, data.user.id))
+
+      const branch = await networkService(
+        employee.employment.branch_id,
+        data.user.id
+      )
+
+      await tx
+        .insert(outlets)
+        .values({
+          branchId: branch.data.id,
+          outletId: employee.employment.organization_id,
+          name: employee.employment.organization_name,
+          createdBy: data.user.id,
+        })
+        .onConflictDoUpdate({
+          target: [outlets.outletId],
+          set: {
+            name: employee.employment.organization_name,
+            updatedBy: data.user.id,
+          },
+        })
+    })
 
     return {
       success: true,

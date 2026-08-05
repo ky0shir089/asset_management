@@ -1,7 +1,7 @@
 "use client"
 
+import AssetLeasePhotoInput from "@/components/asset-lease-photo-input"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import {
   Field,
   FieldDescription,
@@ -16,22 +16,8 @@ import {
   type SearchableSelectOption,
 } from "@/components/ui/searchable-select"
 import type { assetLeaseSchemaType } from "@/lib/formSchemas/asset-lease-schema"
-import {
-  MAX_PHOTO_FILE_COUNT,
-  MAX_PHOTO_FILE_SIZE_BYTES,
-  MAX_PHOTO_FILE_SIZE_MB,
-} from "@/lib/upload-constants"
-import { ImagePlus, Trash2, X } from "lucide-react"
-import Image from "next/image"
-import {
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-  useTransition,
-  type DragEvent,
-  type Ref,
-} from "react"
+import { Trash2 } from "lucide-react"
+import { useRef, useState, useTransition } from "react"
 import {
   Controller,
   type Control,
@@ -41,220 +27,6 @@ import {
 import { NumericFormat } from "react-number-format"
 import { toast } from "sonner"
 import { getAssetCodes, getAssets } from "../action"
-
-const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"]
-
-function PhotoDropzone({
-  files,
-  onChange,
-  id,
-  dropzoneRef,
-  describedBy,
-}: {
-  files: FileList | File[] | null | undefined
-  onChange: (files: FileList | File[] | null) => void
-  id: string
-  dropzoneRef: Ref<HTMLDivElement>
-  describedBy: string
-}) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [dragging, setDragging] = useState(false)
-  const [lightbox, setLightbox] = useState<{
-    url: string
-    name: string
-  } | null>(null)
-
-  const previews = useMemo(() => {
-    if (!files || !files.length) return []
-    return Array.from(files).map((f) => ({
-      name: f.name,
-      url: URL.createObjectURL(f),
-    }))
-  }, [files])
-
-  const mergeFiles = useCallback(
-    (incoming: FileList | File[]) => {
-      const existing = files ? Array.from(files) : []
-      const availableSlots = MAX_PHOTO_FILE_COUNT - existing.length
-
-      if (availableSlots <= 0) {
-        toast.error(`Upload at most ${MAX_PHOTO_FILE_COUNT} photos`)
-        return
-      }
-
-      const filtered: File[] = []
-      const rejectedTypes: string[] = []
-      const rejectedSizes: string[] = []
-
-      for (const file of Array.from(incoming)) {
-        if (!ACCEPTED_TYPES.includes(file.type)) {
-          rejectedTypes.push(file.name)
-          continue
-        }
-        if (file.size > MAX_PHOTO_FILE_SIZE_BYTES) {
-          rejectedSizes.push(file.name)
-          continue
-        }
-        filtered.push(file)
-      }
-
-      if (filtered.length > availableSlots) {
-        toast.error(`Upload at most ${MAX_PHOTO_FILE_COUNT} photos`)
-      }
-      if (rejectedTypes.length) {
-        toast.error(
-          `${rejectedTypes.join(", ")} must be JPEG, PNG, or WebP files`
-        )
-      }
-      if (rejectedSizes.length) {
-        toast.error(
-          `${rejectedSizes.join(", ")} exceeds ${MAX_PHOTO_FILE_SIZE_MB} MB limit`
-        )
-      }
-
-      if (!filtered.length) return
-      onChange([...existing, ...filtered.slice(0, availableSlots)])
-    },
-    [files, onChange]
-  )
-
-  const removeFile = useCallback(
-    (idx: number) => {
-      if (!files) return
-      const arr = Array.from(files).filter((_, i) => i !== idx)
-      onChange(arr.length ? arr : null)
-    },
-    [files, onChange]
-  )
-
-  const handleDrag = useCallback((e: DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-  }, [])
-
-  const handleDragIn = useCallback((e: DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragging(true)
-  }, [])
-
-  const handleDragOut = useCallback((e: DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragging(false)
-  }, [])
-
-  const handleDrop = useCallback(
-    (e: DragEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      setDragging(false)
-      if (e.dataTransfer.files?.length) {
-        mergeFiles(e.dataTransfer.files)
-      }
-    },
-    [mergeFiles]
-  )
-
-  return (
-    <div className="space-y-2">
-      <div
-        ref={dropzoneRef}
-        role="button"
-        tabIndex={0}
-        aria-describedby={describedBy}
-        onDragOver={handleDrag}
-        onDragEnter={handleDragIn}
-        onDragLeave={handleDragOut}
-        onDrop={handleDrop}
-        onClick={() => inputRef.current?.click()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") inputRef.current?.click()
-        }}
-        className={`flex cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed px-4 py-6 text-sm transition-colors ${
-          dragging
-            ? "border-primary bg-primary/5 text-primary"
-            : "border-muted-foreground/25 text-muted-foreground hover:border-primary/50"
-        }`}
-      >
-        <ImagePlus className="mb-1 size-6" />
-        <span>Drop photos here or click to browse</span>
-        <span className="text-xs">JPG, PNG, WebP</span>
-        <input
-          ref={inputRef}
-          id={id}
-          type="file"
-          multiple
-          accept="image/jpeg,image/png,image/webp"
-          className="hidden"
-          onChange={(e) => {
-            if (e.target.files?.length) mergeFiles(e.target.files)
-            e.target.value = ""
-          }}
-        />
-      </div>
-
-      {previews.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {previews.map((p, i) => (
-            <div key={`${p.name}-${i}`} className="group relative">
-              <button
-                type="button"
-                onClick={() => setLightbox(p)}
-                className="cursor-pointer"
-                aria-label={`Preview ${p.name}`}
-              >
-                <Image
-                  src={p.url}
-                  alt={p.name}
-                  width={0}
-                  height={0}
-                  unoptimized
-                  className="size-28 rounded-md border object-cover"
-                />
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  URL.revokeObjectURL(p.url)
-                  removeFile(i)
-                }}
-                className="text-destructive-foreground absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-destructive opacity-0 transition-opacity group-hover:opacity-100"
-                aria-label={`Remove ${p.name}`}
-              >
-                <X className="size-3" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <Dialog
-        open={!!lightbox}
-        onOpenChange={(open) => {
-          if (!open) setLightbox(null)
-        }}
-      >
-        <DialogContent className="sm:max-w-lg" showCloseButton>
-          <DialogTitle className="sr-only">
-            {lightbox?.name ?? "Photo preview"}
-          </DialogTitle>
-          {lightbox && (
-            <Image
-              src={lightbox.url}
-              alt={lightbox.name}
-              width={0}
-              height={0}
-              unoptimized
-              className="h-auto w-full rounded-md object-contain"
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-}
 
 interface AssetLeaseDetailSectionProps {
   index: number
@@ -484,26 +256,50 @@ export default function AssetLeaseDetailSection({
       />
 
       {selectedAsset && (
-        <div className="mt-4 rounded-md bg-muted/50 p-3 text-sm">
-          <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
-            <div>
-              <dt className="font-medium">Condition</dt>
-              <dd className="text-muted-foreground">
-                {selectedAsset.condition || "-"}
-              </dd>
+        <section
+          className="mt-4 overflow-hidden rounded-lg border bg-card text-sm"
+          aria-labelledby={`asset-summary-${index}`}
+        >
+          <div className="bg-muted/30 p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                  Selected asset
+                </p>
+                <h3 id={`asset-summary-${index}`} className="font-semibold">
+                  {selectedAsset.nomorAssets}
+                </h3>
+              </div>
+              <span className="rounded-full border bg-background px-2.5 py-1 text-xs font-medium">
+                Condition: {selectedAsset.condition || "Unavailable"}
+              </span>
             </div>
-            {selectedAsset.specifications.map(
-              (specification, specificationIndex) => (
-                <div key={`${specification.name}-${specificationIndex}`}>
-                  <dt className="font-medium">{specification.name}</dt>
-                  <dd className="text-muted-foreground">
-                    {specification.value || "-"}
-                  </dd>
-                </div>
-              )
+
+            {selectedAsset.specifications.length ? (
+              <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {selectedAsset.specifications.map(
+                  (specification, specificationIndex) => (
+                    <div
+                      key={`${specification.name}-${specificationIndex}`}
+                      className="rounded-md border bg-background px-3 py-2"
+                    >
+                      <dt className="text-xs text-muted-foreground">
+                        {specification.name}
+                      </dt>
+                      <dd className="mt-0.5 font-medium wrap-break-word">
+                        {specification.value || "-"}
+                      </dd>
+                    </div>
+                  )
+                )}
+              </dl>
+            ) : (
+              <div className="rounded-md border bg-background px-3 py-2 text-muted-foreground">
+                No specifications recorded.
+              </div>
             )}
-          </dl>
-        </div>
+          </div>
+        </section>
       )}
 
       <Controller
@@ -511,17 +307,20 @@ export default function AssetLeaseDetailSection({
         control={control}
         render={({ field, fieldState }) => (
           <Field className="mt-4" data-invalid={fieldState.invalid}>
-            <FieldLabel htmlFor={`photos-${index}`}>Photos</FieldLabel>
+            <FieldLabel htmlFor={`photos-${index}`}>
+              Before lease photos
+            </FieldLabel>
             <FieldDescription id={`photos-${index}-description`}>
-              Required. Upload 1-10 JPEG, PNG, or WebP files, maximum 1 MB each.
+              Required. Capture asset condition before this lease. Upload 1-10 JPEG,
+              PNG, or WebP files, maximum 1 MB each.
             </FieldDescription>
-            <PhotoDropzone
+            <AssetLeasePhotoInput
               id={`photos-${index}`}
               files={field.value}
               dropzoneRef={field.ref}
               describedBy={`photos-${index}-description photos-${index}-error`}
               onChange={(files) => {
-                field.onChange(files ? Array.from(files) : [])
+                field.onChange(files)
                 void trigger(`details.${index}.photos`)
               }}
             />

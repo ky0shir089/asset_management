@@ -39,13 +39,13 @@ export default function BranchForm({ data, companies }: BranchFormProps) {
   const router = useRouter()
   const companyItems = companies.map((company) => ({
     label: company.code,
-    value: company.id,
+    value: String(company.talentaCompanyId),
   }))
 
   const form = useForm<branchSchemaType>({
     resolver: zodResolver(branchSchema),
     defaultValues: {
-      companyId: data?.companyId || "",
+      companyId: data?.companyId || 0,
       branchId: data?.branchId || "",
       name: data?.name || "",
       isActive: data?.isActive ?? true,
@@ -84,8 +84,8 @@ export default function BranchForm({ data, companies }: BranchFormProps) {
               <Select
                 items={companyItems}
                 name={field.name}
-                value={field.value || null}
-                onValueChange={(value) => field.onChange(value ?? "")}
+                value={field.value ? String(field.value) : ""}
+                onValueChange={(value) => field.onChange(Number(value))}
                 required
                 disabled={!companies.length}
               >
@@ -99,7 +99,10 @@ export default function BranchForm({ data, companies }: BranchFormProps) {
                 <SelectContent>
                   <SelectGroup>
                     {companies.map((company) => (
-                      <SelectItem key={company.id} value={company.id}>
+                      <SelectItem
+                        key={company.id}
+                        value={String(company.talentaCompanyId)}
+                      >
                         {company.code}
                       </SelectItem>
                     ))}

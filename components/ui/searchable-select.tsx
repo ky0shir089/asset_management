@@ -32,6 +32,7 @@ interface SearchableSelectProps {
   required?: boolean
   name?: string
   id?: string
+  triggerRef?: React.Ref<HTMLButtonElement>
   "aria-invalid"?: boolean
 }
 
@@ -49,6 +50,7 @@ export function SearchableSelect({
   required,
   name,
   id,
+  triggerRef,
   "aria-invalid": ariaInvalid,
 }: SearchableSelectProps) {
   const [open, setOpen] = React.useState(false)
@@ -72,6 +74,7 @@ export function SearchableSelect({
         render={
           <Button
             id={id}
+            ref={triggerRef}
             type="button"
             variant="outline"
             className="w-full justify-between font-normal"

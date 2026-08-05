@@ -40,10 +40,16 @@ interface ReceivedAssetFormProps {
   outlets: outletOptionType[]
 }
 
-function SummaryItem({ label, value }: { label: string; value: string | number }) {
+function SummaryItem({
+  label,
+  value,
+}: {
+  label: string
+  value: string | number
+}) {
   return (
     <div className="rounded-md border bg-muted/30 p-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
         {label}
       </p>
       <p className="mt-1 font-medium">{value}</p>
@@ -55,6 +61,7 @@ export default function ReceivedAssetForm({
   poDetails,
   outlets,
 }: ReceivedAssetFormProps) {
+  console.log({ poDetails, outlets })
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
@@ -95,7 +102,7 @@ export default function ReceivedAssetForm({
     () =>
       selectedPoDetail
         ? outlets.filter(
-            (o) => o.branch.companyId === selectedPoDetail.company.id
+            (o) => o.branch.company.id === selectedPoDetail.company.id
           )
         : [],
     [selectedPoDetail, outlets]
@@ -143,7 +150,9 @@ export default function ReceivedAssetForm({
     setPhotoGroups(createEmptyPhotoGroups(1))
   }
 
-  function handleReceivedQuantityChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleReceivedQuantityChange(
+    e: React.ChangeEvent<HTMLInputElement>
+  ) {
     const parsedValue = Number(e.target.value)
     const nextQuantity = Number.isFinite(parsedValue)
       ? Math.min(Math.max(Math.trunc(parsedValue), 1), maxReceivableQuantity)
@@ -315,7 +324,9 @@ export default function ReceivedAssetForm({
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="receivedQuantity">Received Quantity</FieldLabel>
+              <FieldLabel htmlFor="receivedQuantity">
+                Received Quantity
+              </FieldLabel>
               <Input
                 id="receivedQuantity"
                 name="receivedQuantity"
@@ -328,7 +339,8 @@ export default function ReceivedAssetForm({
                 required
               />
               <FieldDescription>
-                Maximum receivable: {selectedPoDetail ? maxReceivableQuantity : 0}
+                Maximum receivable:{" "}
+                {selectedPoDetail ? maxReceivableQuantity : 0}
               </FieldDescription>
             </Field>
           </div>
@@ -341,8 +353,8 @@ export default function ReceivedAssetForm({
           <div className="mb-4 flex flex-col gap-1">
             <h3 className="font-semibold">Selected PO line</h3>
             <p className="text-sm text-muted-foreground">
-              Review company, asset, specification, and remaining quantity before
-              receiving.
+              Review company, asset, specification, and remaining quantity
+              before receiving.
             </p>
           </div>
 
@@ -368,7 +380,7 @@ export default function ReceivedAssetForm({
           </div>
 
           <div className="mt-4 rounded-md border bg-muted/30 p-3">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
               Detail specification
             </p>
             {selectedSpecifications.length ? (

@@ -39,7 +39,7 @@ export default function OutletForm({ data, branches }: OutletFormProps) {
   const router = useRouter()
   const branchItems = branches.map((branch) => ({
     label: branch.name,
-    value: branch.id,
+    value: branch.branchId,
   }))
 
   const form = useForm<outletSchemaType>({
@@ -99,7 +99,7 @@ export default function OutletForm({ data, branches }: OutletFormProps) {
                 <SelectContent>
                   <SelectGroup>
                     {branches.map((branch) => (
-                      <SelectItem key={branch.id} value={branch.id}>
+                      <SelectItem key={branch.id} value={branch.branchId}>
                         {branch.name}
                       </SelectItem>
                     ))}

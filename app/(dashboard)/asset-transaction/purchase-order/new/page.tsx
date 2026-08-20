@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/back-button"
 import FormSkeleton from "@/components/form-skeleton"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -22,6 +23,7 @@ const RenderForm = async () => {
       suppliers={suppliers}
       purchaseRequests={purchaseRequests}
       purchaseRequestDetails={purchaseRequestDetails}
+      supplierAccounts={[]}
     />
   )
 }
@@ -29,7 +31,8 @@ const RenderForm = async () => {
 export default function PurchaseOrderNewPage() {
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center gap-4">
+        <BackButton href="/asset-transaction/purchase-order" />
         <CardTitle className="text-2xl">Create Purchase Order</CardTitle>
       </CardHeader>
 

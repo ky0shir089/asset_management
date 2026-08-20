@@ -665,6 +665,7 @@ export async function assetTransferStore(values: assetTransferSchemaType) {
           rentDtlId: detail.id,
           transferDate: data.transferDate,
           assetId: detail.assetId,
+          condition: data.condition,
           outletId: data.outletId,
           userId: data.userId,
           status: "PENDING",

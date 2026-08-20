@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/back-button"
 import { roleOptions } from "@/data/select"
 import { userShow } from "@/data/user"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,7 +18,8 @@ export default async function userEditPage({ params }: { params: Params }) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center gap-4">
+        <BackButton href="/setup-aplikasi/user" />
         <CardTitle className="text-2xl">Edit user</CardTitle>
       </CardHeader>
 

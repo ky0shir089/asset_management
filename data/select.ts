@@ -9,6 +9,7 @@ import {
   outlets,
   purchaseOrders,
   purchaseRequests,
+  supplierAccounts,
 } from "@/drizzle/schema"
 
 export async function moduleOptions() {
@@ -229,6 +230,30 @@ export async function supplierOptions() {
 }
 export type supplierOptionType = Awaited<ReturnType<typeof supplierOptions>>[0]
 
+export async function supplierAccountOptions(supplierId: string) {
+  await requireUser()
+
+  return db.query.supplierAccounts.findMany({
+    where: eq(supplierAccounts.supplierId, supplierId),
+    columns: {
+      id: true,
+      accountNo: true,
+      accountName: true,
+    },
+    with: {
+      bank: {
+        columns: {
+          name: true,
+        },
+      },
+    },
+    orderBy: (sa, { asc }) => [asc(sa.createdAt)],
+  })
+}
+export type supplierAccountOptionType = Awaited<
+  ReturnType<typeof supplierAccountOptions>
+>[0]
+
 export async function purchaseRequestOptions(id?: string) {
   await requireUser()
 
@@ -261,21 +286,6 @@ export async function purchaseRequestDetailOptions(
   currentPurchaseOrderId?: string
 ) {
   await requireUser()
-
-  const currentPo = currentPurchaseOrderId
-    ? await db.query.purchaseOrders.findFirst({
-        where: eq(purchaseOrders.id, currentPurchaseOrderId),
-        columns: {
-          id: true,
-          prId: true,
-          createdBy: true,
-        },
-      })
-    : null
-
-  if (currentPo) {
-    return []
-  }
 
   const prs = await db.query.prDetails.findMany({
     with: {

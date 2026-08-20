@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/back-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { companyShow } from "@/data/company"
 import { Suspense } from "react"
@@ -17,7 +18,8 @@ export default async function CompanyEditPage({ params }: { params: Params }) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center gap-4">
+        <BackButton href="/network/company" />
         <CardTitle className="text-2xl">Edit Company</CardTitle>
       </CardHeader>
 

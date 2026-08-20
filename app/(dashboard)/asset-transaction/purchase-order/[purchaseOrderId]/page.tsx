@@ -1,5 +1,6 @@
 import { buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { BackButton } from "@/components/back-button"
 import {
   Table,
   TableBody,
@@ -86,12 +87,15 @@ export default async function PurchaseOrderDetailPage({
           <CardTitle className="text-2xl">Purchase Order Detail</CardTitle>
 
           <div className="flex flex-wrap gap-2">
-            <Link
-              href="/asset-transaction/purchase-order"
-              className={buttonVariants({ variant: "outline", size: "sm" })}
-            >
-              Back
-            </Link>
+            <BackButton href="/asset-transaction/purchase-order" />
+            {data.status === "NEW" && (
+              <Link
+                href={`/asset-transaction/purchase-order/${purchaseOrderId}/edit`}
+                className={buttonVariants({ size: "sm" })}
+              >
+                Edit
+              </Link>
+            )}
             <PurchaseOrderPdfDownloadButton purchaseOrderId={purchaseOrderId} />
           </div>
         </div>
@@ -101,6 +105,14 @@ export default async function PurchaseOrderDetailPage({
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <InfoItem label="Date" value={data.date} />
           <InfoItem label="Supplier" value={data.supplier?.name ?? "-"} />
+          <InfoItem
+            label="Supplier Account"
+            value={
+              data.supplierAccount
+                ? `${data.supplierAccount.bank?.name} - ${data.supplierAccount.accountNo} (${data.supplierAccount.accountName})`
+                : "-"
+            }
+          />
           <InfoItem
             label="Purchase Request"
             value={formatPurchaseRequest(data.purchaseRequest)}

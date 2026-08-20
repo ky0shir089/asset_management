@@ -9,6 +9,7 @@ import {
   prDetails,
   suppliers,
   companies,
+  supplierAccounts,
 } from "@/drizzle/schema"
 import { authorizeAction } from "@/lib/auth/permission"
 import { isSuperAdmin } from "@/lib/auth/permission-query"
@@ -16,7 +17,7 @@ import {
   purchaseOrderSchema,
   purchaseOrderSchemaType,
 } from "@/lib/formSchemas/purchase-order-schema"
-import { desc, eq, ilike, inArray, sql } from "drizzle-orm"
+import { and, desc, eq, ilike, inArray, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 
 function getPurchaseOrderPeriod(date: string | Date) {
@@ -118,6 +119,24 @@ async function validatePurchaseOrderPayload(
 
   if (!supplier) {
     return { success: false, message: "Supplier not found" }
+  }
+
+  // 2b. Verify Supplier Account (if provided)
+  if (values.supplierAccountId && values.supplierAccountId !== "") {
+    const account = await db.query.supplierAccounts.findFirst({
+      where: and(
+        eq(supplierAccounts.id, values.supplierAccountId),
+        eq(supplierAccounts.supplierId, values.supplierId)
+      ),
+      columns: { id: true },
+    })
+
+    if (!account) {
+      return {
+        success: false,
+        message: "Supplier account not found or does not belong to selected supplier",
+      }
+    }
   }
 
   // 3. Verify detail uniqueness
@@ -226,6 +245,8 @@ export async function purchaseOrderStore(values: purchaseOrderSchemaType) {
           poNo,
           prId: validation.data.prId,
           supplierId: validation.data.supplierId,
+          supplierAccountId:
+            validation.data.supplierAccountId || null,
           description: validation.data.description,
           shippingCost: validation.data.shippingCost,
           createdBy: user.id,
@@ -311,10 +332,10 @@ export async function purchaseOrderUpdate(
       }
     }
 
-    if (existing.status !== "REQUEST") {
+    if (existing.status !== "NEW") {
       return {
         success: false,
-        message: "Only purchase orders with status 'REQUEST' can be updated.",
+        message: "Only purchase orders with status 'NEW' can be updated.",
       }
     }
 
@@ -370,6 +391,8 @@ export async function purchaseOrderUpdate(
         .set({
           date: validation.data.date,
           supplierId: validation.data.supplierId,
+          supplierAccountId:
+            validation.data.supplierAccountId || null,
           description: validation.data.description,
           shippingCost: validation.data.shippingCost,
           updatedBy: user.id,

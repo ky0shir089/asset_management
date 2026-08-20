@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/back-button"
 import FormSkeleton from "@/components/form-skeleton"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { bankShow } from "@/data/bank"
@@ -17,7 +18,8 @@ export default async function BankEditPage({ params }: { params: Params }) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center gap-4">
+        <BackButton href="/asset/bank" />
         <CardTitle className="text-2xl">Edit Bank</CardTitle>
       </CardHeader>
 

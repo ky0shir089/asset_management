@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/back-button"
 import {
   Card,
   CardContent,
@@ -26,7 +27,8 @@ export default async function AssetCategoryEditPage({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center gap-4">
+        <BackButton href="/asset/category" />
         <CardTitle className="text-2xl">Edit Asset Category</CardTitle>
       </CardHeader>
 

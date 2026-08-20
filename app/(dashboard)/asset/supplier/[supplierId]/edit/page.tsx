@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/back-button"
 import FormSkeleton from "@/components/form-skeleton"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { bankOptions } from "@/data/select"
@@ -18,7 +19,8 @@ export default async function SupplierEditPage({ params }: { params: Params }) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center gap-4">
+        <BackButton href="/asset/supplier" />
         <CardTitle className="text-2xl">Edit Supplier</CardTitle>
       </CardHeader>
 

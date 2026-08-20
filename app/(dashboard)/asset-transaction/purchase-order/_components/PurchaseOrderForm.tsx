@@ -15,6 +15,7 @@ import type {
   purchaseRequestDetailOptionType,
   purchaseRequestOptionType,
   supplierOptionType,
+  supplierAccountOptionType,
 } from "@/data/select"
 import {
   purchaseOrderSchema,
@@ -22,7 +23,7 @@ import {
 } from "@/lib/formSchemas/purchase-order-schema"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
-import { useTransition, useEffect } from "react"
+import { useTransition, useEffect, useState, useCallback } from "react"
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { NumericFormat } from "react-number-format"
@@ -34,6 +35,7 @@ interface PurchaseOrderFormProps {
   suppliers: supplierOptionType[]
   purchaseRequests: purchaseRequestOptionType[]
   purchaseRequestDetails: purchaseRequestDetailOptionType[]
+  supplierAccounts: supplierAccountOptionType[]
 }
 
 function getToday() {
@@ -45,9 +47,14 @@ export default function PurchaseOrderForm({
   suppliers,
   purchaseRequests,
   purchaseRequestDetails,
+  supplierAccounts: initialSupplierAccounts,
 }: PurchaseOrderFormProps) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
+  const [supplierAccounts, setSupplierAccounts] = useState(
+    initialSupplierAccounts
+  )
+  const [loadingAccounts, setLoadingAccounts] = useState(false)
 
   const supplierItems = suppliers.map((s) => ({
     label: s.name,
@@ -75,6 +82,7 @@ export default function PurchaseOrderForm({
       date: data?.date ?? getToday(),
       prId: data?.prId ?? "",
       supplierId: data?.supplierId ?? "",
+      supplierAccountId: data?.supplierAccountId ?? "",
       description: data?.description ?? "",
       shippingCost: data?.shippingCost ?? 0,
       details: initialDetails,
@@ -96,6 +104,11 @@ export default function PurchaseOrderForm({
     name: "prId",
   })
 
+  const selectedSupplierId = useWatch({
+    control: form.control,
+    name: "supplierId",
+  })
+
   const shippingCost =
     useWatch({
       control: form.control,
@@ -107,6 +120,33 @@ export default function PurchaseOrderForm({
       control: form.control,
       name: "details",
     }) ?? []
+
+  // Fetch supplier accounts when supplier changes
+  const fetchSupplierAccounts = useCallback(async (supplierId: string) => {
+    if (!supplierId) {
+      setSupplierAccounts([])
+      return
+    }
+    setLoadingAccounts(true)
+    try {
+      const res = await fetch(
+        `/api/supplier-accounts?supplierId=${supplierId}`
+      )
+      if (res.ok) {
+        const accounts = await res.json()
+        setSupplierAccounts(accounts)
+      }
+    } catch {
+      setSupplierAccounts([])
+    } finally {
+      setLoadingAccounts(false)
+    }
+  }, [])
+
+  const supplierAccountItems = supplierAccounts.map((sa) => ({
+    label: `${sa.bank?.name} - ${sa.accountNo} (${sa.accountName})`,
+    value: sa.id,
+  }))
 
   // Auto-populate detail lines on PR select (only in Create mode)
   useEffect(() => {
@@ -170,7 +210,7 @@ export default function PurchaseOrderForm({
       <div className="rounded-lg border p-4">
         <h3 className="mb-4 font-semibold">Order Info</h3>
         <FieldGroup>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Controller
               name="date"
               control={form.control}
@@ -196,7 +236,9 @@ export default function PurchaseOrderForm({
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor={field.name}>Purchase Request No</FieldLabel>
+                  <FieldLabel htmlFor={field.name}>
+                    Purchase Request No
+                  </FieldLabel>
                   <SearchableSelect
                     id={field.name}
                     name={field.name}
@@ -228,12 +270,49 @@ export default function PurchaseOrderForm({
                     name={field.name}
                     options={supplierItems}
                     value={field.value}
-                    onValueChange={field.onChange}
+                    onValueChange={(val) => {
+                      field.onChange(val)
+                      form.setValue("supplierAccountId", "")
+                      fetchSupplierAccounts(val)
+                    }}
                     placeholder="Select Supplier"
                     searchPlaceholder="Search supplier..."
                     emptyMessage="No supplier found"
                     disabled={!suppliers.length}
                     required
+                    aria-invalid={fieldState.invalid}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+
+            <Controller
+              name="supplierAccountId"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name}>Supplier Account</FieldLabel>
+                  <SearchableSelect
+                    id={field.name}
+                    name={field.name}
+                    options={supplierAccountItems}
+                    value={field.value ?? ""}
+                    onValueChange={field.onChange}
+                    placeholder={
+                      loadingAccounts
+                        ? "Loading accounts..."
+                        : "Select Supplier Account"
+                    }
+                    searchPlaceholder="Search account..."
+                    emptyMessage="No supplier account found"
+                    disabled={
+                      !selectedSupplierId ||
+                      loadingAccounts ||
+                      supplierAccountItems.length === 0
+                    }
                     aria-invalid={fieldState.invalid}
                   />
                   {fieldState.invalid && (

@@ -12,7 +12,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core"
 import { users } from "./auth-schema"
-import { assetDatas } from "./asset-transaction"
+import { assetDatas, conditionEnum } from "./asset-transaction"
 import { companies, outlets } from "./network"
 
 export const rentAssets = pgTable(
@@ -88,6 +88,7 @@ export const assetTransfers = pgTable(
     assetId: uuid("asset_id")
       .notNull()
       .references(() => assetDatas.id, { onDelete: "cascade" }),
+    condition: conditionEnum(),
     outletId: uuid("outlet_id")
       .notNull()
       .references(() => outlets.id, { onDelete: "cascade" }),
@@ -141,6 +142,23 @@ export const rentPhotoAssets = pgTable(
   },
   (table) => [index("rent_photo_assets_transfer_id_idx").on(table.transferId)]
 )
+
+export const maintenances = pgTable("maintenances", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  assetId: uuid("asset_id")
+    .notNull()
+    .references(() => assetDatas.id, { onDelete: "cascade" }),
+  detail: text("detail").notNull(),
+  amount: integer("amount").notNull().default(0),
+  createdBy: text("created_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  updatedBy: text("updated_by").references(() => users.id, {
+    onDelete: "cascade",
+  }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+})
 
 export const rentAssetsRelations = relations(rentAssets, ({ one, many }) => ({
   company: one(companies, {

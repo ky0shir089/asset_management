@@ -1,5 +1,6 @@
 import { buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { BackButton } from "@/components/back-button"
 import {
   Table,
   TableBody,
@@ -70,12 +71,7 @@ export default async function PrDetailPage({ params }: { params: Params }) {
           <CardTitle className="text-2xl">Purchase Request Detail</CardTitle>
 
           <div className="flex flex-wrap gap-2">
-            <Link
-              href="/asset-transaction/list-purchase-request"
-              className={buttonVariants({ variant: "outline", size: "sm" })}
-            >
-              Back
-            </Link>
+            <BackButton href="/asset-transaction/list-purchase-request" />
             <PurchaseRequestStatusActions id={data.id} status={data.status} />
           </div>
         </div>

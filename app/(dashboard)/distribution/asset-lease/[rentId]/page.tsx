@@ -3,7 +3,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar"
-import { buttonVariants } from "@/components/ui/button"
+import { BackButton } from "@/components/back-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
@@ -18,7 +18,7 @@ import { Check, Clock3, MapPin, UserRound } from "lucide-react"
 import Link from "next/link"
 import type { ReactNode } from "react"
 import AssetLeaseDecisionActions from "../_components/AssetLeaseDecisionActions"
-import AssetLeasePhotoCarousel from "../_components/AssetLeasePhotoCarousel"
+import { PhotoCarousel } from "@/components/photo-carousel"
 import AssetLeaseStatusBadge from "../_components/AssetLeaseStatusBadge"
 import AssetLeaseTransferAction from "../_components/AssetLeaseTransferAction"
 
@@ -84,17 +84,8 @@ export default async function AssetLeaseDetailPage({
   const { rentId } = await params
   const data = await assetLeaseShow(rentId)
   return (
-    <>
-      <Link
-        href="/distribution/asset-lease"
-        className={buttonVariants({
-          variant: "outline",
-          size: "sm",
-          className: "w-fit",
-        })}
-      >
-        Back
-      </Link>
+    <div className="space-y-6">
+      <BackButton href="/distribution/asset-lease" />
 
       <Card>
         <CardHeader className="gap-4">
@@ -200,7 +191,7 @@ export default async function AssetLeaseDetailPage({
                                   <p className="text-xs font-medium text-muted-foreground">
                                     {label}
                                   </p>
-                                  <AssetLeasePhotoCarousel photos={photos} />
+                                  <PhotoCarousel photos={photos} layout="inline" />
                                 </div>
                               )
                             })}
@@ -423,9 +414,10 @@ export default async function AssetLeaseDetailPage({
                                       Receipt photos
                                     </h5>
                                     {transfer.receiptPhotos.length ? (
-                                      <AssetLeasePhotoCarousel
+                                      <PhotoCarousel
                                         photos={transfer.receiptPhotos}
                                         label={`Receipt evidence for asset ${detail.asset.nomorAssets}, transfer ${detail.transferHistory.length - transferIndex}`}
+                                        layout="inline"
                                       />
                                     ) : (
                                       <p className="text-xs text-muted-foreground">
@@ -453,6 +445,6 @@ export default async function AssetLeaseDetailPage({
           </section>
         </CardContent>
       </Card>
-    </>
+    </div>
   )
 }

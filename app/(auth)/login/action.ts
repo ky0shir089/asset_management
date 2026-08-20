@@ -286,7 +286,7 @@ export async function signUp(username: string): Promise<LoginActionResult> {
     await db.transaction(async (tx) => {
       await tx.insert(roleUser).values({
         userId: data.user.id,
-        roleId: "3b65806f-f6b9-489e-89fb-d3ea99186f30",
+        roleId: "a42a065a-7b85-42b9-b33d-4db437e4e425",
         createdBy: data.user.id,
       })
 

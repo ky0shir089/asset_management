@@ -4,6 +4,7 @@ import { requireUser } from "@/data/require-user"
 import { db } from "@/drizzle/db"
 import {
   poDetails,
+  purchaseOrders,
   assetDatas,
   photoAssets,
   outlets,
@@ -286,6 +287,25 @@ export async function receivedAssetStore(formData: FormData) {
         )
 
         createdAssets.push(...assetsToCreate)
+
+        // 5. Update PO status if fully received
+        const [{ totalOrdered }] = await tx
+          .select({ totalOrdered: sql<number>`sum(${poDetails.quantity})` })
+          .from(poDetails)
+          .where(eq(poDetails.poId, poId))
+
+        const [{ totalReceived }] = await tx
+          .select({ totalReceived: sql<number>`count(*)` })
+          .from(assetDatas)
+          .innerJoin(poDetails, eq(assetDatas.poDetailId, poDetails.id))
+          .where(eq(poDetails.poId, poId))
+
+        if (Number(totalReceived) >= Number(totalOrdered)) {
+          await tx
+            .update(purchaseOrders)
+            .set({ status: "COMPLETED" })
+            .where(eq(purchaseOrders.id, poId))
+        }
       })
 
       // --- Post-transaction: save photos & QR per created asset ---

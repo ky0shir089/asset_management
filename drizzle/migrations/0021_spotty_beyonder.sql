@@ -1,0 +1,2 @@
+ALTER TABLE "purchase_orders" ADD COLUMN "supplier_account_id" uuid;--> statement-breakpoint
+ALTER TABLE "purchase_orders" ADD CONSTRAINT "purchase_orders_supplier_account_id_supplier_accounts_id_fk" FOREIGN KEY ("supplier_account_id") REFERENCES "public"."supplier_accounts"("id") ON DELETE set null ON UPDATE no action;

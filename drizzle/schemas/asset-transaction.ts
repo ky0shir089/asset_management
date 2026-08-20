@@ -18,6 +18,7 @@ import {
   assetCodes,
   assetSpecs,
   suppliers,
+  supplierAccounts,
 } from "./master-asset"
 
 export const purchaseRequests = pgTable(
@@ -102,6 +103,10 @@ export const purchaseOrders = pgTable(
     supplierId: uuid("supplier_id")
       .notNull()
       .references(() => suppliers.id, { onDelete: "cascade" }),
+    supplierAccountId: uuid("supplier_account_id").references(
+      () => supplierAccounts.id,
+      { onDelete: "set null" }
+    ),
     description: varchar("description", { length: 255 }).notNull(),
     shippingCost: integer("shipping_cost").default(0),
     totalQuantity: integer("total_quantity").default(0),
@@ -257,6 +262,10 @@ export const purchaseOrdersRelations = relations(
     supplier: one(suppliers, {
       fields: [purchaseOrders.supplierId],
       references: [suppliers.id],
+    }),
+    supplierAccount: one(supplierAccounts, {
+      fields: [purchaseOrders.supplierAccountId],
+      references: [supplierAccounts.id],
     }),
     creator: one(users, {
       fields: [purchaseOrders.createdBy],

@@ -20,9 +20,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import {
+  ASSET_TRANSFER_CONDITIONS,
   assetTransferSchema,
   type assetTransferSchemaType,
 } from "@/lib/formSchemas/asset-transfer-schema"
+import { ArrowRightLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useId, useMemo, useState, useTransition } from "react"
 import { toast } from "sonner"
@@ -61,6 +63,9 @@ export default function AssetLeaseTransferAction({
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [transferDate, setTransferDate] = useState(defaultTransferDate)
+  const [condition, setCondition] = useState<
+    typeof ASSET_TRANSFER_CONDITIONS[number] | ""
+  >("")
   const [outletId, setOutletId] = useState("")
   const [userId, setUserId] = useState("")
   const [errors, setErrors] = useState<
@@ -83,9 +88,14 @@ export default function AssetLeaseTransferAction({
     value: user.id,
     label: user.name,
   }))
+  const conditionOptions = ASSET_TRANSFER_CONDITIONS.map((item) => ({
+    value: item,
+    label: item,
+  }))
 
   function resetForm() {
     setTransferDate(defaultTransferDate)
+    setCondition("")
     setOutletId("")
     setUserId("")
     setErrors({})
@@ -96,6 +106,7 @@ export default function AssetLeaseTransferAction({
       rentId,
       rentDetailId,
       transferDate,
+      condition: condition as typeof ASSET_TRANSFER_CONDITIONS[number],
       outletId,
       userId,
       expectedOutletId: currentOutlet.id,
@@ -156,11 +167,12 @@ export default function AssetLeaseTransferAction({
         {hasDestinationOutlet && !awaitingReceipt && (
           <DialogTrigger
             render={
-              <Button type="button" size="sm" variant="outline" />
+              <Button type="button" size="sm" variant="outline">
+                <ArrowRightLeft className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+                {latestTransfer ? "Transfer again" : "Transfer"}
+              </Button>
             }
-          >
-            {latestTransfer ? "Transfer again" : "Transfer"}
-          </DialogTrigger>
+          />
         )}
         <DialogContent
           showCloseButton={!isPending}
@@ -175,48 +187,91 @@ export default function AssetLeaseTransferAction({
             aria-busy={isPending}
             noValidate
           >
-            <DialogHeader>
-              <DialogTitle>Transfer asset {assetNumber}</DialogTitle>
-              <DialogDescription>
-                Assign asset from {currentOutlet.name} to outlet and user within
-                lease company.
+            <DialogHeader className="space-y-1">
+              <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+                <ArrowRightLeft className="h-4 w-4 text-primary" />
+                Transfer Asset #{assetNumber}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Reassign asset location, condition, and user within lease company.
               </DialogDescription>
             </DialogHeader>
 
             {latestTransfer && (
-              <div className="rounded-lg border bg-muted/30 p-3 text-sm">
-                <p className="font-medium">Current assignment</p>
-                <p className="mt-1 text-muted-foreground">
+              <div className="rounded-lg border bg-muted/40 p-3 text-xs">
+                <span className="font-medium text-foreground">Current Assignment:</span>{" "}
+                <span className="text-muted-foreground">
                   {latestTransfer.outletName} · {latestTransfer.userName} ·{" "}
                   {latestTransfer.transferDate}
-                </p>
+                </span>
               </div>
             )}
 
-            <FieldGroup>
-              <Field data-invalid={Boolean(errors.transferDate)}>
-                <FieldLabel htmlFor={`${fieldId}-date`}>Transfer date</FieldLabel>
-                <Input
-                  id={`${fieldId}-date`}
-                  type="date"
-                  value={transferDate}
-                  onChange={(event) => {
-                    setTransferDate(event.target.value)
-                    setErrors((current) => ({
-                      ...current,
-                      transferDate: undefined,
-                    }))
-                  }}
-                  aria-invalid={Boolean(errors.transferDate)}
-                  disabled={isPending}
-                  required
-                />
-                <FieldError>{errors.transferDate}</FieldError>
-              </Field>
+            <FieldGroup className="space-y-4 py-1">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field data-invalid={Boolean(errors.transferDate)}>
+                  <FieldLabel
+                    htmlFor={`${fieldId}-date`}
+                    className="text-xs font-medium"
+                  >
+                    Transfer Date
+                  </FieldLabel>
+                  <Input
+                    id={`${fieldId}-date`}
+                    type="date"
+                    value={transferDate}
+                    onChange={(event) => {
+                      setTransferDate(event.target.value)
+                      setErrors((current) => ({
+                        ...current,
+                        transferDate: undefined,
+                      }))
+                    }}
+                    aria-invalid={Boolean(errors.transferDate)}
+                    disabled={isPending}
+                    required
+                    className="h-9 text-xs"
+                  />
+                  <FieldError>{errors.transferDate}</FieldError>
+                </Field>
+
+                <Field data-invalid={Boolean(errors.condition)}>
+                  <FieldLabel
+                    htmlFor={`${fieldId}-condition`}
+                    className="text-xs font-medium"
+                  >
+                    Asset Condition
+                  </FieldLabel>
+                  <SearchableSelect
+                    id={`${fieldId}-condition`}
+                    value={condition}
+                    onValueChange={(value) => {
+                      setCondition(
+                        value as typeof ASSET_TRANSFER_CONDITIONS[number]
+                      )
+                      setErrors((current) => ({
+                        ...current,
+                        condition: undefined,
+                      }))
+                    }}
+                    options={conditionOptions}
+                    placeholder="Select condition"
+                    searchPlaceholder="Search condition..."
+                    emptyMessage="No matching condition"
+                    aria-invalid={Boolean(errors.condition)}
+                    disabled={isPending}
+                    required
+                  />
+                  <FieldError>{errors.condition}</FieldError>
+                </Field>
+              </div>
 
               <Field data-invalid={Boolean(errors.outletId)}>
-                <FieldLabel htmlFor={`${fieldId}-outlet`}>
-                  Destination outlet
+                <FieldLabel
+                  htmlFor={`${fieldId}-outlet`}
+                  className="text-xs font-medium"
+                >
+                  Destination Outlet
                 </FieldLabel>
                 <SearchableSelect
                   id={`${fieldId}-outlet`}
@@ -238,15 +293,18 @@ export default function AssetLeaseTransferAction({
                   disabled={isPending || !hasDestinationOutlet}
                   required
                 />
-                <FieldDescription>
-                  Only active outlets within lease company appear.
+                <FieldDescription className="text-[11px]">
+                  Active outlets within lease company.
                 </FieldDescription>
                 <FieldError>{errors.outletId}</FieldError>
               </Field>
 
               <Field data-invalid={Boolean(errors.userId)}>
-                <FieldLabel htmlFor={`${fieldId}-user`}>
-                  Assigned user
+                <FieldLabel
+                  htmlFor={`${fieldId}-user`}
+                  className="text-xs font-medium"
+                >
+                  Assigned User
                 </FieldLabel>
                 <SearchableSelect
                   id={`${fieldId}-user`}
@@ -269,24 +327,29 @@ export default function AssetLeaseTransferAction({
                   disabled={isPending || !outletId}
                   required
                 />
-                <FieldDescription>
-                  Eligibility follows user latest Talenta login assignment.
+                <FieldDescription className="text-[11px]">
+                  Follows user latest Talenta login assignment.
                 </FieldDescription>
                 <FieldError>{errors.userId}</FieldError>
               </Field>
             </FieldGroup>
 
-            <DialogFooter>
+            <DialogFooter className="gap-2 sm:gap-0">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setOpen(false)}
                 disabled={isPending}
+                size="sm"
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isPending || !hasDestinationOutlet}>
-                {isPending ? "Transferring…" : "Confirm transfer"}
+              <Button
+                type="submit"
+                disabled={isPending || !hasDestinationOutlet}
+                size="sm"
+              >
+                {isPending ? "Transferring…" : "Confirm Transfer"}
               </Button>
               {isPending && (
                 <span className="sr-only" role="status">

@@ -84,6 +84,20 @@ export async function purchaseOrderShow(id: string) {
           name: true,
         },
       },
+      supplierAccount: {
+        columns: {
+          id: true,
+          accountNo: true,
+          accountName: true,
+        },
+        with: {
+          bank: {
+            columns: {
+              name: true,
+            },
+          },
+        },
+      },
       purchaseRequest: {
         columns: {
           id: true,

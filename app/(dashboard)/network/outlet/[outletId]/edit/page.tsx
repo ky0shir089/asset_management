@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/back-button"
 import FormSkeleton from "@/components/form-skeleton"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { outletShow } from "@/data/outlet"
@@ -18,7 +19,8 @@ export default async function OutletEditPage({ params }: { params: Params }) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center gap-4">
+        <BackButton href="/network/outlet" />
         <CardTitle className="text-2xl">Edit Outlet</CardTitle>
       </CardHeader>
 

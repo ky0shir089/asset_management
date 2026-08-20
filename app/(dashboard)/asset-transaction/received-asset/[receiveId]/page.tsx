@@ -2,8 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { buttonVariants } from "@/components/ui/button"
 import { receivedAssetShow } from "@/data/received-asset"
 import Image from "next/image"
-import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { PhotoCarousel } from "@/components/photo-carousel"
+import { BackButton } from "@/components/back-button"
 
 type Params = Promise<{ receiveId: string }>
 
@@ -36,13 +36,7 @@ export default async function ReceivedAssetDetailPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link
-          href="/asset-transaction/received-asset"
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-        >
-          <ArrowLeft data-icon="inline-start" />
-          Back
-        </Link>
+        <BackButton href="/asset-transaction/received-asset" />
         <h2 className="text-3xl font-bold">Received Asset Detail</h2>
       </div>
 
@@ -110,30 +104,7 @@ export default async function ReceivedAssetDetailPage({
             <CardTitle>Photos</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {data.photos.map((photo) => (
-                <a
-                  key={photo.id}
-                  href={photo.path}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block"
-                >
-                  <div className="relative h-40 w-full overflow-hidden rounded border">
-                    <Image
-                      src={photo.path}
-                      alt={photo.name}
-                      fill
-                      sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-                      className="object-contain"
-                    />
-                  </div>
-                  <p className="mt-1 truncate text-xs text-muted-foreground">
-                    {photo.name}
-                  </p>
-                </a>
-              ))}
-            </div>
+            <PhotoCarousel photos={data.photos} />
           </CardContent>
         </Card>
       )}

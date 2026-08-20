@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/back-button"
 import { moduleShow } from "@/data/module"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Suspense } from "react";
@@ -16,7 +17,8 @@ export default async function ModuleEditPage({ params }: { params: Params }) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center gap-4">
+        <BackButton href="/setup-aplikasi/module" />
         <CardTitle className="text-2xl">Edit Module</CardTitle>
       </CardHeader>
 

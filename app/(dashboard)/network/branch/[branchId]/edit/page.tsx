@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/back-button"
 import FormSkeleton from "@/components/form-skeleton"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { branchShow } from "@/data/branch"
@@ -18,7 +19,8 @@ export default async function BranchEditPage({ params }: { params: Params }) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center gap-4">
+        <BackButton href="/network/branch" />
         <CardTitle className="text-2xl">Edit Branch</CardTitle>
       </CardHeader>
 

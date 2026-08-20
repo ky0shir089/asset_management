@@ -11,6 +11,7 @@ export const purchaseOrderSchema = z.object({
   date: z.iso.date(),
   prId: z.uuid(),
   supplierId: z.uuid(),
+  supplierAccountId: z.uuid().optional().or(z.literal("")),
   description: z.string().min(1),
   shippingCost: z.number().min(0),
   details: z.array(poDetailInputSchema).min(1),

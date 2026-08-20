@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/back-button"
 import FormSkeleton from "@/components/form-skeleton"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { purchaseRequestShow } from "@/data/purchase-request"
@@ -54,7 +55,8 @@ export default async function PurchaseRequestEditPage({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center gap-4">
+        <BackButton href="/asset-transaction/purchase-request" />
         <CardTitle className="text-2xl">
           Edit Purchase Request
         </CardTitle>

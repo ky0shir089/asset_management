@@ -1,25 +1,33 @@
-import { DataTable } from "@/components/ui/data-table"
 import { listAssetsIndex, type ListAssetsFilters } from "@/data/received-asset"
-import { columns } from "./column"
+import AssetClientTable from "./_components/AssetClientTable"
 import { Suspense } from "react"
 import { DataTableSkeleton } from "@/components/data-table-skeleton"
 import AssetListFilters from "./_components/AssetListFilters"
 
 import { getSearchParam, type SearchParamValue } from "@/lib/helper"
+import { requireUser } from "@/data/require-user"
 
 const RenderTable = async ({
   currentPage,
   size,
   filters,
+  showSensitiveFields,
 }: {
   currentPage: number
   size: number
   filters: ListAssetsFilters
+  showSensitiveFields: boolean
 }) => {
   const result = await listAssetsIndex(currentPage, size, filters)
   const { data, meta } = result
 
-  return <DataTable columns={columns} data={data} meta={meta} />
+  return (
+    <AssetClientTable
+      data={data}
+      meta={meta}
+      showSensitiveFields={showSensitiveFields}
+    />
+  )
 }
 
 export default async function ListAssetsPage({
@@ -35,6 +43,12 @@ export default async function ListAssetsPage({
     status?: SearchParamValue
   }>
 }) {
+  const user = await requireUser()
+  const showSensitiveFields =
+    user.role === "Super Administrator" ||
+    user.role === "Admin GA" ||
+    user.role === "Admin IT"
+
   const params = await searchParams
   const currentPage = Number(getSearchParam(params.page) ?? 1)
   const size = Number(getSearchParam(params.size) ?? 10)
@@ -55,8 +69,13 @@ export default async function ListAssetsPage({
 
       <AssetListFilters />
 
-      <Suspense key={suspenseKey} fallback={<DataTableSkeleton columns={7} />}>
-        <RenderTable currentPage={currentPage} size={size} filters={filters} />
+      <Suspense key={suspenseKey} fallback={<DataTableSkeleton columns={showSensitiveFields ? 8 : 6} />}>
+        <RenderTable
+          currentPage={currentPage}
+          size={size}
+          filters={filters}
+          showSensitiveFields={showSensitiveFields}
+        />
       </Suspense>
     </>
   )

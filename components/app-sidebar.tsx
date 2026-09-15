@@ -31,6 +31,7 @@ import {
   MonitorCog,
   MonitorSmartphone,
   Truck,
+  Wrench,
   type LucideIcon,
 } from "lucide-react"
 import Link from "next/link"
@@ -42,6 +43,7 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   landmark: Landmark,
   monitorsmartphone: MonitorSmartphone,
   truck: Truck,
+  wrench: Wrench,
 }
 
 function getModuleIcon(icon: string) {

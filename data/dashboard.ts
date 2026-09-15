@@ -64,7 +64,7 @@ const statusSchema = z.string().trim().min(1).max(255)
 const statusLabels: Record<string, string> = {
   TERSEDIA: "Available",
   BOOKED: "Booked",
-  DISEWA: "Leased",
+  DIGUNAKAN: "Leased",
 }
 
 function parseOptionId(
@@ -500,7 +500,7 @@ export async function getDashboardData(input: DashboardFilterInput = {}) {
             total: sql<number>`count(*)::int`,
             available: sql<number>`(count(*) filter (where ${assetDatas.status} = 'TERSEDIA'))::int`,
             booked: sql<number>`(count(*) filter (where ${assetDatas.status} = 'BOOKED'))::int`,
-            leased: sql<number>`(count(*) filter (where ${assetDatas.status} = 'DISEWA'))::int`,
+            leased: sql<number>`(count(*) filter (where ${assetDatas.status} = 'DIGUNAKAN'))::int`,
           })
           .from(assetDatas)
           .innerJoin(poDetails, eq(assetDatas.poDetailId, poDetails.id))
@@ -740,7 +740,7 @@ export async function getDashboardData(input: DashboardFilterInput = {}) {
   )
   const sortedStatuses = [...statusOptions]
     .sort((a, b) => {
-      const knownOrder = ["TERSEDIA", "BOOKED", "DISEWA"]
+      const knownOrder = ["TERSEDIA", "BOOKED", "DIGUNAKAN"]
       const aIndex = knownOrder.indexOf(a)
       const bIndex = knownOrder.indexOf(b)
 

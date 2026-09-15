@@ -17,7 +17,7 @@ import {
   purchaseRequestSchema,
   purchaseRequestSchemaType,
 } from "@/lib/formSchemas/purchase-request-schema"
-import { and, desc, eq, ilike, inArray, isNotNull, ne, sql } from "drizzle-orm"
+import { and, eq, ilike, inArray, isNotNull, ne, sql } from "drizzle-orm"
 
 function isSafeIdentifier(value: string) {
   return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)
@@ -77,18 +77,18 @@ async function generatePurchaseRequestNumber(
 
   const { yearText, monthText } = getPurchaseRequestPeriod(input.date)
   const prefix = `PR/${company.code.trim()}/${yearText}/${monthText}/`
+  const yearScope = `PR/${company.code.trim()}/${yearText}/%`
 
-  const [last] = await tx
+  const [{ lastSequence }] = await tx
     .select({
-      prNo: purchaseRequests.prNo,
+      lastSequence: sql`coalesce(max(substring(${purchaseRequests.prNo} from '/([0-9]+)$')::numeric), 0)`.mapWith(Number),
     })
     .from(purchaseRequests)
     .where(
-      ilike(purchaseRequests.prNo, `${prefix}%`),
+      ilike(purchaseRequests.prNo, yearScope),
     )
-    .orderBy(desc(purchaseRequests.createdAt))
 
-  const sequence = String((last?.prNo ? parseInt(last.prNo.split("/").pop() || "0") : 0) + 1).padStart(3, "0")
+  const sequence = String(lastSequence + 1).padStart(3, "0")
 
   return `${prefix}${sequence}`
 }

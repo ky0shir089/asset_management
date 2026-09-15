@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -13,6 +13,13 @@ import {
 import { cn } from "@/lib/utils"
 
 type Photo = { id: string; path: string; name: string }
+
+function isPdfPath(path: string, name?: string) {
+  return (
+    path.toLowerCase().endsWith(".pdf") ||
+    Boolean(name?.toLowerCase().endsWith(".pdf"))
+  )
+}
 
 /**
  * Shared photo carousel in a modal dialog.
@@ -76,18 +83,31 @@ export function PhotoCarousel({
             {layout === "grid" ? (
               <>
                 <div className="relative h-40 w-full overflow-hidden rounded-lg border transition-all group-hover:ring-2 group-hover:ring-primary group-hover:shadow-md">
-                  <Image
-                    src={photo.path}
-                    alt={photo.name}
-                    fill
-                    sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-                    className="object-contain transition-transform duration-200 group-hover:scale-105"
-                  />
+                  {isPdfPath(photo.path, photo.name) ? (
+                    <div className="flex size-full flex-col items-center justify-center bg-muted/40 p-4 text-center">
+                      <FileText className="size-12 text-muted-foreground" />
+                      <span className="mt-2 text-xs font-medium text-muted-foreground">
+                        PDF
+                      </span>
+                    </div>
+                  ) : (
+                    <Image
+                      src={photo.path}
+                      alt={photo.name}
+                      fill
+                      sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+                      className="object-contain transition-transform duration-200 group-hover:scale-105"
+                    />
+                  )}
                 </div>
                 <p className="mt-1.5 truncate text-xs text-muted-foreground">
                   {photo.name}
                 </p>
               </>
+            ) : isPdfPath(photo.path, photo.name) ? (
+              <div className="flex size-14 items-center justify-center rounded-md border bg-muted/40">
+                <FileText className="size-6 text-muted-foreground" />
+              </div>
             ) : (
               <Image
                 src={photo.path}
@@ -104,7 +124,10 @@ export function PhotoCarousel({
 
       {/* Modal viewer */}
       <DialogContent
-        className="max-h-[calc(100dvh-2rem)] w-fit max-w-[calc(100%-2rem)] gap-3 overflow-y-auto sm:max-w-[calc(100%-2rem)]"
+        className={cn(
+          "max-h-[calc(100dvh-2rem)] w-fit max-w-[calc(100%-2rem)] gap-3 overflow-y-auto sm:max-w-[calc(100%-2rem)]",
+          isPdfPath(current.path, current.name) && "w-full sm:max-w-4xl"
+        )}
         onKeyDown={(e) => {
           if (e.key === "ArrowLeft") {
             e.preventDefault()
@@ -121,20 +144,33 @@ export function PhotoCarousel({
             : current.name}
         </DialogTitle>
 
-        {/* Main image */}
-        <Image
-          key={current.id}
-          src={current.path}
-          alt={
-            label
-              ? `${label}, photo ${safe + 1} of ${photos.length}`
-              : current.name
-          }
-          width={1200}
-          height={800}
-          sizes="(min-width: 640px) calc(100vw - 4rem), 100vw"
-          className="max-h-[60vh] w-auto max-w-[calc(100vw-4rem)] object-contain"
-        />
+        {/* Main image / document */}
+        {isPdfPath(current.path, current.name) ? (
+          <iframe
+            key={current.id}
+            src={current.path}
+            title={
+              label
+                ? `${label}, photo ${safe + 1} of ${photos.length}`
+                : current.name
+            }
+            className="h-[60vh] w-full min-w-[300px] sm:min-w-[600px] rounded-md border"
+          />
+        ) : (
+          <Image
+            key={current.id}
+            src={current.path}
+            alt={
+              label
+                ? `${label}, photo ${safe + 1} of ${photos.length}`
+                : current.name
+            }
+            width={1200}
+            height={800}
+            sizes="(min-width: 640px) calc(100vw - 4rem), 100vw"
+            className="max-h-[60vh] w-auto max-w-[calc(100vw-4rem)] object-contain"
+          />
+        )}
 
         {/* Nav + counter */}
         <div className="flex items-center justify-center gap-3">
@@ -186,13 +222,19 @@ export function PhotoCarousel({
                 )}
                 aria-label={`View ${photo.name}`}
               >
-                <Image
-                  src={photo.path}
-                  alt=""
-                  fill
-                  sizes="40px"
-                  className="object-cover"
-                />
+                {isPdfPath(photo.path, photo.name) ? (
+                  <div className="flex size-full items-center justify-center bg-muted/40">
+                    <FileText className="size-5 text-muted-foreground" />
+                  </div>
+                ) : (
+                  <Image
+                    src={photo.path}
+                    alt=""
+                    fill
+                    sizes="40px"
+                    className="object-cover"
+                  />
+                )}
               </button>
             ))}
           </div>

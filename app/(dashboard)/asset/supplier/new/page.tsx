@@ -1,14 +1,17 @@
 import { BackButton } from "@/components/back-button"
 import FormSkeleton from "@/components/form-skeleton"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { bankOptions } from "@/data/select"
+import { bankOptions, provinceOptions } from "@/data/select"
 import { Suspense } from "react"
 import SupplierForm from "../_components/SupplierForm"
 
 const RenderForm = async () => {
-  const banks = await bankOptions()
+  const [banks, provinces] = await Promise.all([
+    bankOptions(),
+    provinceOptions(),
+  ])
 
-  return <SupplierForm banks={banks} />
+  return <SupplierForm banks={banks} provinces={provinces} />
 }
 
 export default function SupplierNewPage() {

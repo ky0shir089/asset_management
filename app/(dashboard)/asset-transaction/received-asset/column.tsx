@@ -1,5 +1,6 @@
 "use client"
 
+import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import type { receivedAssetIndexType } from "@/data/received-asset"
 import { ColumnDef } from "@tanstack/react-table"
@@ -10,6 +11,14 @@ export const columns: ColumnDef<receivedAssetIndexType>[] = [
   {
     header: "Asset Number",
     accessorKey: "nomorAssets",
+    cell: ({ row }) => (
+      <div className="flex flex-wrap items-center gap-2">
+        <span>{row.original.nomorAssets}</span>
+        {row.original.photos.length === 0 && (
+          <Badge variant="outline">No photos</Badge>
+        )}
+      </div>
+    ),
   },
   {
     header: "Company",

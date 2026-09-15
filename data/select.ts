@@ -1,15 +1,19 @@
 import { db } from "@/drizzle/db"
 import { requireUser } from "./require-user"
-import { and, count, eq, inArray, isNotNull, ne, sql } from "drizzle-orm"
+import { and, asc, count, eq, inArray, isNotNull, ne, sql } from "drizzle-orm"
 import {
   assetDatas,
   assetSpecs,
   branches,
   companies,
+  districts,
   outlets,
+  provinces,
   purchaseOrders,
   purchaseRequests,
+  regencies,
   supplierAccounts,
+  villages,
 } from "@/drizzle/schema"
 
 export async function moduleOptions() {
@@ -217,6 +221,98 @@ export async function bankOptions() {
 }
 export type bankOptionType = Awaited<ReturnType<typeof bankOptions>>[0]
 
+export type geographyOptionType = {
+  value: string
+  label: string
+}
+
+export async function provinceOptions(): Promise<geographyOptionType[]> {
+  await requireUser()
+
+  const data = await db
+    .select({ value: provinces.id, label: provinces.name })
+    .from(provinces)
+    .orderBy(asc(provinces.name))
+
+  return data
+}
+
+export async function regencyOptions(
+  provinceId: string
+): Promise<geographyOptionType[]> {
+  await requireUser()
+
+  const data = await db
+    .select({ value: regencies.code, label: regencies.name })
+    .from(regencies)
+    .where(eq(regencies.provinceId, provinceId))
+    .orderBy(asc(regencies.name))
+
+  return data
+}
+
+export async function districtOptions(
+  provinceId: string,
+  regencyId: string
+): Promise<geographyOptionType[]> {
+  await requireUser()
+
+  const data = await db
+    .select({ value: districts.code, label: districts.name })
+    .from(districts)
+    .where(
+      and(
+        eq(districts.provinceId, provinceId),
+        eq(districts.regencyId, regencyId)
+      )
+    )
+    .orderBy(asc(districts.name))
+
+  return data
+}
+
+export async function villageOptions(
+  provinceId: string,
+  regencyId: string,
+  districtId: string
+): Promise<geographyOptionType[]> {
+  await requireUser()
+
+  const data = await db
+    .select({
+      id: villages.id,
+      name: villages.name,
+      postalCode: villages.postalCode,
+    })
+    .from(villages)
+    .where(
+      and(
+        eq(villages.provinceId, provinceId),
+        eq(villages.regencyId, regencyId),
+        eq(villages.districtId, districtId)
+      )
+    )
+    .orderBy(asc(villages.name))
+
+  return data.map((village) => ({
+    value: String(village.id),
+    label: `${village.name} (${village.postalCode})`,
+  }))
+}
+
+export async function villageHierarchy(villageId: number) {
+  await requireUser()
+
+  return db.query.villages.findFirst({
+    where: eq(villages.id, villageId),
+    columns: {
+      provinceId: true,
+      regencyId: true,
+      districtId: true,
+    },
+  })
+}
+
 export async function supplierOptions() {
   await requireUser()
 
@@ -224,6 +320,32 @@ export async function supplierOptions() {
     columns: {
       id: true,
       name: true,
+      address: true,
+    },
+    with: {
+      village: {
+        columns: {
+          name: true,
+          postalCode: true,
+        },
+        with: {
+          regency: {
+            columns: {
+              name: true,
+            },
+          },
+          district: {
+            columns: {
+              name: true,
+            },
+          },
+          province: {
+            columns: {
+              name: true,
+            },
+          },
+        },
+      },
     },
     orderBy: (suppliers, { asc }) => [asc(suppliers.createdAt)],
   })
@@ -260,7 +382,7 @@ export async function purchaseRequestOptions(id?: string) {
   return await db.query.purchaseRequests.findMany({
     where: and(
       eq(purchaseRequests.status, "APPROVED"),
-      ne(purchaseRequests.poStatus, "COMPLETED"),
+      ne(purchaseRequests.poStatus, "CLOSED"),
       id ? eq(purchaseRequests.id, id) : isNotNull(purchaseRequests.id)
     ),
     with: {

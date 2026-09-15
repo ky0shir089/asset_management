@@ -41,11 +41,10 @@ export async function receivedAssetIndex(
 
   const pagination = paginationParams(currentPage, size)
   const search = query?.trim()
-  const superAdmin = await isSuperAdmin(user.id)
 
   const searchConditions = []
 
-  if (!superAdmin) {
+  if (user.role !== "Super Administrator" && user.role !== "Admin GA") {
     searchConditions.push(eq(assetDatas.createdBy, user.id))
   }
 
@@ -94,6 +93,7 @@ export async function receivedAssetIndex(
     db.query.assetDatas.findMany({
       where,
       with: {
+        photos: { columns: { id: true }, limit: 1 },
         poDetail: {
           with: {
             purchaseOrder: {
@@ -153,37 +153,10 @@ export async function listAssetsIndex(
   filters: ListAssetsFilters
 ) {
   const user = await requireUser()
-  await requirePermission("received-asset:browse")
+  await requirePermission("maintenance:browse")
 
   const pagination = paginationParams(currentPage, size)
-  const superAdmin = await isSuperAdmin(user.id)
   const conditions = [isNotNull(poDetails.price)]
-
-  if (!superAdmin) {
-    conditions.push(eq(assetDatas.createdBy, user.id))
-  }
-
-  const nomorAsset = filters.nomorAsset?.trim()
-  const assetCode = filters.assetCode?.trim()
-  const location = filters.location?.trim()
-  const recipient = filters.user?.trim()
-  const status = filters.status?.trim()
-
-  if (nomorAsset) {
-    conditions.push(ilike(assetDatas.nomorAssets, `%${nomorAsset}%`))
-  }
-  if (assetCode) {
-    conditions.push(ilike(assetCodes.name, `%${assetCode}%`))
-  }
-  if (location) {
-    conditions.push(ilike(outlets.name, `%${location}%`))
-  }
-  if (recipient) {
-    conditions.push(ilike(users.name, `%${recipient}%`))
-  }
-  if (status) {
-    conditions.push(eq(assetDatas.status, status))
-  }
 
   const latestReceivedTransfer = db
     .selectDistinctOn([assetTransfers.assetId], {
@@ -198,6 +171,33 @@ export async function listAssetsIndex(
       desc(assetTransfers.id)
     )
     .as("latest_received_transfer")
+
+  // Role filtering
+  // 1. Super Administrator, Admin GA, Admin IT: view all data
+  // 2. User: view owned data (createdBy) or received transfer user (latestReceivedTransfer.userId)
+  // 3. Branch Manager: view owned branch and outlets under that branch (user.branchId)
+  const isFullAccess =
+    user.role === "Super Administrator" ||
+    user.role === "Admin GA" ||
+    user.role === "Admin IT"
+
+  if (!isFullAccess) {
+    if (user.role === "Branch Manager" && user.branchId) {
+      const branchOutlets = db
+        .select({ id: outlets.id })
+        .from(outlets)
+        .where(eq(outlets.branchId, user.branchId))
+
+      conditions.push(inArray(assetDatas.outletId, branchOutlets))
+    } else {
+      conditions.push(
+        or(
+          eq(assetDatas.createdBy, user.id),
+          eq(latestReceivedTransfer.userId, user.id)
+        )!
+      )
+    }
+  }
 
   const where = and(...conditions)
   const baseQuery = () =>

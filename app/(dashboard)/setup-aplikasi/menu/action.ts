@@ -45,15 +45,15 @@ export async function menuStore(values: menuSchemaType) {
           },
           {
             menuId: menu.id,
-            name: `${permissionKey}:create`,
-          },
-          {
-            menuId: menu.id,
             name: `${permissionKey}:read`,
           },
           {
             menuId: menu.id,
-            name: `${permissionKey}:update`,
+            name: `${permissionKey}:edit`,
+          },
+          {
+            menuId: menu.id,
+            name: `${permissionKey}:add`,
           },
           {
             menuId: menu.id,
@@ -96,6 +96,7 @@ export async function menuUpdate(id: string, values: menuSchemaType) {
 
     await db.transaction(async (tx) => {
       const permissionKey = validation.data.key ?? ""
+
       const [menu] = await tx
         .update(menus)
         .set({
@@ -105,17 +106,17 @@ export async function menuUpdate(id: string, values: menuSchemaType) {
         .where(eq(menus.id, id))
         .returning()
 
-      const fetcPermissions = await tx.query.permissions.findMany({
+      const fetchPermissions = await tx.query.permissions.findMany({
         where: eq(permissions.menuId, menu.id),
         orderBy: [permissions.id],
       })
 
-      if (!fetcPermissions) {
+      if (!fetchPermissions) {
         return
       }
 
       await Promise.all(
-        fetcPermissions.map((item) => {
+        fetchPermissions.map((item) => {
           const permissionAction = item.name.split(":").at(-1) ?? item.name
 
           return tx

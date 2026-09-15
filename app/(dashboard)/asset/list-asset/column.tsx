@@ -15,43 +15,55 @@ const priceFormatter = new Intl.NumberFormat("id-ID", {
   maximumFractionDigits: 0,
 })
 
-export const columns: ColumnDef<listAssetsIndexType>[] = [
-  {
-    header: "Nomor Asset",
-    accessorKey: "assetNumber",
-  },
-  {
-    header: "Category",
-    accessorKey: "categoryName",
-  },
-  {
-    header: "Asset Code",
-    accessorKey: "assetCodeName",
-  },
-  {
-    header: "Asset Location",
-    accessorKey: "outletName",
-  },
-  {
-    header: "Harga Beli",
-    accessorKey: "purchasePrice",
-    cell: ({ row }) => (
-      <span className="block text-right tabular-nums">
-        {row.original.purchasePrice != null
-          ? priceFormatter.format(row.original.purchasePrice)
-          : "-"}
-      </span>
-    ),
-  },
-  {
+export function getColumns(
+  showSensitiveFields: boolean = true
+): ColumnDef<listAssetsIndexType>[] {
+  const cols: ColumnDef<listAssetsIndexType>[] = [
+    {
+      header: "Nomor Asset",
+      accessorKey: "assetNumber",
+    },
+    {
+      header: "Category",
+      accessorKey: "categoryName",
+    },
+    {
+      header: "Asset Code",
+      accessorKey: "assetCodeName",
+    },
+    {
+      header: "Asset Location",
+      accessorKey: "outletName",
+    },
+  ]
+
+  if (showSensitiveFields) {
+    cols.push({
+      header: "Harga Beli",
+      accessorKey: "purchasePrice",
+      cell: ({ row }) => (
+        <span className="block text-right tabular-nums">
+          {row.original.purchasePrice != null
+            ? priceFormatter.format(row.original.purchasePrice)
+            : "-"}
+        </span>
+      ),
+    })
+  }
+
+  cols.push({
     header: "User",
     accessorFn: (row) => row.recipientName ?? "-",
-  },
-  {
-    header: "Status",
-    accessorKey: "status",
-  },
-  {
+  })
+
+  if (showSensitiveFields) {
+    cols.push({
+      header: "Status",
+      accessorKey: "status",
+    })
+  }
+
+  cols.push({
     id: "actions",
     header: "Aksi",
     cell: ({ row }) => (
@@ -66,5 +78,9 @@ export const columns: ColumnDef<listAssetsIndexType>[] = [
         <MaintenanceModal asset={row.original} />
       </div>
     ),
-  },
-]
+  })
+
+  return cols
+}
+
+export const columns = getColumns(true)

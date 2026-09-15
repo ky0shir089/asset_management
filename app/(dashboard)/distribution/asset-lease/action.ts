@@ -23,6 +23,7 @@ import { isSuperAdmin } from "@/lib/auth/permission-query"
 import {
   assetLeaseApproveSchema,
   assetLeaseRejectSchema,
+  assetLeaseReturnSchema,
   assetLeaseSchema,
 } from "@/lib/formSchemas/asset-lease-schema"
 import {
@@ -36,7 +37,17 @@ import {
   saveRentPhotos,
   type SavedPhoto,
 } from "@/lib/local-upload"
-import { and, asc, desc, eq, ilike, inArray, ne, sql } from "drizzle-orm"
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  isNull,
+  ne,
+  sql,
+} from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import z from "zod"
 
@@ -56,20 +67,19 @@ async function generateRentNumber(
       .map((part) => [part.type, part.value])
   )
   const prefix = `SWA/${parts.year}/${parts.month}/`
+  const yearScope = `SWA/${parts.year}/`
 
-  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${prefix}))`)
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${yearScope}))`)
 
-  const [last] = await tx
-    .select({ rentNo: rentAssets.rentNo })
+  const [{ lastSequence }] = await tx
+    .select({
+      lastSequence: sql`coalesce(max(substring(${rentAssets.rentNo} from '/([0-9]+)$')::numeric), 0)`.mapWith(Number),
+    })
     .from(rentAssets)
-    .where(ilike(rentAssets.rentNo, `${prefix}%`))
-    .orderBy(desc(rentAssets.rentNo))
-    .limit(1)
-
-  const lastSequence = Number(last?.rentNo.split("/").pop() ?? 0)
+    .where(ilike(rentAssets.rentNo, `${yearScope}%`))
 
   if (lastSequence >= 99_999) {
-    throw new Error("Monthly asset lease number capacity reached")
+    throw new Error("Yearly asset lease number capacity reached")
   }
 
   const sequence = String(lastSequence + 1).padStart(5, "0")
@@ -467,7 +477,7 @@ export async function assetLeaseApprove(formData: FormData) {
 
       const claimed = await tx
         .update(assetDatas)
-        .set({ status: "DISEWA", updatedBy: user.id })
+        .set({ status: "DIGUNAKAN", updatedBy: user.id })
         .where(
           and(
             inArray(assetDatas.id, assetIds),
@@ -514,6 +524,231 @@ export async function assetLeaseApprove(formData: FormData) {
   }
 }
 
+export async function assetLeaseReturn(formData: FormData) {
+  const user = await requireUser()
+  const permission = await authorizeAction("asset-lease:update")
+  if (!permission.authorized) return permission.response
+
+  const rentId = String(formData.get("rentId") ?? "")
+  const rentDetailId = String(formData.get("rentDetailId") ?? "")
+  const validation = assetLeaseReturnSchema.safeParse({
+    rentId,
+    rentDetailId,
+    dateEnd: String(formData.get("dateEnd") ?? ""),
+    outletId: String(formData.get("outletId") ?? ""),
+    photos: collectDetailPhotos(formData, rentDetailId),
+  })
+  if (!validation.success) {
+    return {
+      success: false,
+      message: validation.error.issues[0]?.message ?? "Invalid return data",
+    }
+  }
+
+  const data = validation.data
+  let prepared: PreparedRentDetail[] = []
+  try {
+    const superAdmin = await isSuperAdmin(user.id)
+    prepared = await prepareDetailPhotos([
+      { id: data.rentDetailId, photos: data.photos },
+    ])
+
+    const assetId = await db.transaction(async (tx) => {
+      const [lease] = await tx
+        .select({
+          id: rentAssets.id,
+          status: rentAssets.status,
+          createdBy: rentAssets.createdBy,
+        })
+        .from(rentAssets)
+        .where(eq(rentAssets.id, data.rentId))
+        .for("update")
+
+      if (!lease) throw new AssetLeaseWorkflowError("Asset lease not found")
+      if (lease.status !== "APPROVED") {
+        throw new AssetLeaseWorkflowError(
+          "Only approved asset leases can receive returns"
+        )
+      }
+      if (!superAdmin && lease.createdBy !== user.id) {
+        throw new AssetLeaseWorkflowError("Asset lease not found")
+      }
+
+      const [detail] = await tx
+        .select({
+          id: rentAssetDetails.id,
+          assetId: rentAssetDetails.assetId,
+          dateStart: rentAssetDetails.dateStart,
+          dateEnd: rentAssetDetails.dateEnd,
+        })
+        .from(rentAssetDetails)
+        .where(
+          and(
+            eq(rentAssetDetails.id, data.rentDetailId),
+            eq(rentAssetDetails.rentAssetId, data.rentId)
+          )
+        )
+        .for("update")
+
+      if (!detail) throw new AssetLeaseWorkflowError("Leased asset not found")
+      if (detail.dateEnd) {
+        throw new AssetLeaseWorkflowError("Asset was already returned")
+      }
+      if (!detail.dateStart) {
+        throw new AssetLeaseWorkflowError("Asset lease has no start date")
+      }
+      if (data.dateEnd < detail.dateStart) {
+        throw new AssetLeaseWorkflowError(
+          "Return date cannot be before lease start date"
+        )
+      }
+
+      const [asset] = await tx
+        .select({ id: assetDatas.id, status: assetDatas.status })
+        .from(assetDatas)
+        .where(eq(assetDatas.id, detail.assetId))
+        .for("update")
+
+      if (!asset || asset.status !== "DIGUNAKAN") {
+        throw new AssetLeaseWorkflowError("Leased asset is no longer active")
+      }
+
+      const [latestTransfer] = await tx
+        .select({
+          transferDate: assetTransfers.transferDate,
+          status: assetTransfers.status,
+        })
+        .from(assetTransfers)
+        .where(eq(assetTransfers.assetId, detail.assetId))
+        .orderBy(desc(assetTransfers.createdAt), desc(assetTransfers.id))
+        .limit(1)
+
+      if (latestTransfer?.status === "PENDING") {
+        throw new AssetLeaseWorkflowError(
+          "Latest transfer must be received before return"
+        )
+      }
+      if (
+        latestTransfer?.transferDate &&
+        data.dateEnd < latestTransfer.transferDate
+      ) {
+        throw new AssetLeaseWorkflowError(
+          "Return date cannot be before latest transfer date"
+        )
+      }
+
+      const [outlet] = await tx
+        .select({ id: outlets.id })
+        .from(outlets)
+        .innerJoin(branches, eq(outlets.branchId, branches.branchId))
+        .innerJoin(
+          companies,
+          eq(branches.companyId, companies.talentaCompanyId)
+        )
+        .where(
+          and(
+            eq(outlets.id, data.outletId),
+            eq(outlets.isActive, true),
+            eq(branches.isActive, true),
+            eq(companies.isActive, true),
+            eq(companies.code, "LSA")
+          )
+        )
+        .limit(1)
+
+      if (!outlet) {
+        throw new AssetLeaseWorkflowError(
+          "Receiving outlet must be an active LSA outlet"
+        )
+      }
+
+      const [returned] = await tx
+        .update(rentAssetDetails)
+        .set({ dateEnd: data.dateEnd, updatedBy: user.id })
+        .where(
+          and(
+            eq(rentAssetDetails.id, detail.id),
+            eq(rentAssetDetails.rentAssetId, data.rentId),
+            isNull(rentAssetDetails.dateEnd)
+          )
+        )
+        .returning({ id: rentAssetDetails.id })
+      if (!returned) {
+        throw new AssetLeaseWorkflowError("Asset was already returned")
+      }
+
+      const [released] = await tx
+        .update(assetDatas)
+        .set({
+          outletId: data.outletId,
+          status: "TERSEDIA",
+          updatedBy: user.id,
+        })
+        .where(
+          and(
+            eq(assetDatas.id, detail.assetId),
+            eq(assetDatas.status, "DIGUNAKAN")
+          )
+        )
+        .returning({ id: assetDatas.id })
+      if (!released) {
+        throw new AssetLeaseWorkflowError("Leased asset is no longer active")
+      }
+
+      await tx.insert(rentPhotoAssets).values(
+        prepared[0]!.photos.map((photo) => ({
+          rentDtlId: detail.id,
+          name: photo.name,
+          path: photo.path,
+          type: "RETURN" as const,
+          createdBy: user.id,
+        }))
+      )
+
+      const [openDetail] = await tx
+        .select({ id: rentAssetDetails.id })
+        .from(rentAssetDetails)
+        .where(
+          and(
+            eq(rentAssetDetails.rentAssetId, data.rentId),
+            isNull(rentAssetDetails.dateEnd)
+          )
+        )
+        .limit(1)
+
+      if (!openDetail) {
+        await tx
+          .update(rentAssets)
+          .set({ status: "RETURNED", updatedBy: user.id })
+          .where(
+            and(
+              eq(rentAssets.id, data.rentId),
+              eq(rentAssets.status, "APPROVED")
+            )
+          )
+      }
+
+      return detail.assetId
+    })
+
+    revalidatePath("/distribution/asset-lease")
+    revalidatePath(`/distribution/asset-lease/${data.rentId}`)
+    revalidatePath("/asset/list-asset")
+    revalidatePath(`/asset/list-asset/${assetId}`)
+
+    return { success: true, message: "Asset returned successfully" }
+  } catch (error) {
+    await cleanupRentPhotos(prepared.flatMap((detail) => detail.photos)).catch(
+      () => {}
+    )
+    if (error instanceof AssetLeaseWorkflowError) {
+      return { success: false, message: error.message }
+    }
+    console.error("Failed to return asset", error)
+    return { success: false, message: "Failed to return asset" }
+  }
+}
+
 export async function assetTransferStore(values: assetTransferSchemaType) {
   const user = await requireUser()
   const permission = await authorizeAction("asset-lease:update")
@@ -542,6 +777,7 @@ export async function assetTransferStore(values: assetTransferSchemaType) {
           createdBy: rentAssets.createdBy,
           status: rentAssets.status,
           receiveDate: rentAssets.receiveDate,
+          dateEnd: rentAssetDetails.dateEnd,
         })
         .from(rentAssetDetails)
         .innerJoin(rentAssets, eq(rentAssetDetails.rentAssetId, rentAssets.id))
@@ -551,9 +787,9 @@ export async function assetTransferStore(values: assetTransferSchemaType) {
       if (!detail || detail.rentAssetId !== data.rentId) {
         throw new AssetLeaseWorkflowError("Leased asset not found")
       }
-      if (detail.status !== "APPROVED") {
+      if (detail.status !== "APPROVED" || detail.dateEnd) {
         throw new AssetLeaseWorkflowError(
-          "Only approved leased assets can be transferred"
+          "Only active approved leased assets can be transferred"
         )
       }
       if (!superAdmin && detail.createdBy !== user.id) {
@@ -570,7 +806,7 @@ export async function assetTransferStore(values: assetTransferSchemaType) {
         .where(eq(assetDatas.id, detail.assetId))
         .for("update")
 
-      if (!asset || asset.status !== "DISEWA") {
+      if (!asset || asset.status !== "DIGUNAKAN") {
         throw new AssetLeaseWorkflowError(
           "Only approved leased assets can be transferred"
         )
@@ -683,7 +919,7 @@ export async function assetTransferStore(values: assetTransferSchemaType) {
           and(
             eq(assetDatas.id, detail.assetId),
             eq(assetDatas.outletId, data.expectedOutletId),
-            eq(assetDatas.status, "DISEWA")
+            eq(assetDatas.status, "DIGUNAKAN")
           )
         )
         .returning({ id: assetDatas.id })

@@ -15,12 +15,12 @@ import {
 } from "@/components/ui/table"
 import { assetLeaseShow } from "@/data/asset-lease"
 import { Check, Clock3, MapPin, UserRound } from "lucide-react"
-import Link from "next/link"
 import type { ReactNode } from "react"
 import AssetLeaseDecisionActions from "../_components/AssetLeaseDecisionActions"
 import { PhotoCarousel } from "@/components/photo-carousel"
 import AssetLeaseStatusBadge from "../_components/AssetLeaseStatusBadge"
 import AssetLeaseTransferAction from "../_components/AssetLeaseTransferAction"
+import AssetLeaseReturnAction from "../_components/AssetLeaseReturnAction"
 
 type Params = Promise<{ rentId: string }>
 
@@ -159,69 +159,113 @@ export default async function AssetLeaseDetailPage({
                     <TableHead>Asset No</TableHead>
                     <TableHead>Asset Name</TableHead>
                     <TableHead>Start Date</TableHead>
+                    <TableHead>End Date</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead>Photos</TableHead>
                     {data.canTransfer && <TableHead>Transfer</TableHead>}
+                    {data.canReturn && <TableHead>Return</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.details.length ? (
-                    data.details.map((detail) => (
-                      <TableRow key={detail.id}>
-                        <TableCell className="font-medium">
-                          {detail.asset?.nomorAssets ?? "-"}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {detail.asset?.poDetail?.prDetail?.assetCode?.name ??
-                            "-"}
-                        </TableCell>
-                        <TableCell>{detail.dateStart}</TableCell>
-                        <TableCell className="text-right">
-                          {(detail.amount ?? 0).toLocaleString("id-ID")}
-                        </TableCell>
-                        <TableCell>
-                          <div className="min-w-36 space-y-3">
-                            {PHOTO_GROUPS.map(([type, label]) => {
-                              const photos = detail.photos.filter(
-                                (photo) => photo.type === type
-                              )
-                              if (!photos.length) return null
-                              return (
-                                <div key={type} className="space-y-1.5">
-                                  <p className="text-xs font-medium text-muted-foreground">
-                                    {label}
-                                  </p>
-                                  <PhotoCarousel photos={photos} layout="inline" />
-                                </div>
-                              )
-                            })}
-                            {!detail.photos.some(
-                              (photo) => photo.type !== "RECEIVE"
-                            ) && (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        {data.canTransfer && (
-                          <TableCell>
-                            <AssetLeaseTransferAction
-                              rentId={data.id}
-                              rentDetailId={detail.id}
-                              assetNumber={detail.asset.nomorAssets}
-                              defaultTransferDate={jakartaToday()}
-                              currentOutlet={detail.asset.outlet}
-                              latestTransfer={detail.latestTransfer}
-                              outlets={data.transferOutlets}
-                              users={data.transferUsers}
-                            />
+                    data.details.map((detail) => {
+                      const isReturned = Boolean(detail.dateEnd)
+                      const hasPendingTransfer =
+                        detail.latestTransfer?.status === "PENDING"
+                      const minimumReturnDate =
+                        detail.latestTransfer?.transferDate &&
+                        detail.latestTransfer.transferDate > (detail.dateStart ?? "")
+                          ? detail.latestTransfer.transferDate
+                          : (detail.dateStart ?? data.rentDate)
+
+                      return (
+                        <TableRow key={detail.id}>
+                          <TableCell className="font-medium">
+                            {detail.asset?.nomorAssets ?? "-"}
                           </TableCell>
-                        )}
-                      </TableRow>
-                    ))
+                          <TableCell className="font-medium">
+                            {detail.asset?.poDetail?.prDetail?.assetCode?.name ??
+                              "-"}
+                          </TableCell>
+                          <TableCell>{detail.dateStart ?? "-"}</TableCell>
+                          <TableCell>{detail.dateEnd ?? "-"}</TableCell>
+                          <TableCell className="text-right">
+                            {(detail.amount ?? 0).toLocaleString("id-ID")}
+                          </TableCell>
+                          <TableCell>
+                            <div className="min-w-36 space-y-3">
+                              {PHOTO_GROUPS.map(([type, label]) => {
+                                const photos = detail.photos.filter(
+                                  (photo) => photo.type === type
+                                )
+                                if (!photos.length) return null
+                                return (
+                                  <div key={type} className="space-y-1.5">
+                                    <p className="text-xs font-medium text-muted-foreground">
+                                      {label}
+                                    </p>
+                                    <PhotoCarousel
+                                      photos={photos}
+                                      layout="inline"
+                                    />
+                                  </div>
+                                )
+                              })}
+                              {!detail.photos.some(
+                                (photo) => photo.type !== "RECEIVE"
+                              ) && (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </div>
+                          </TableCell>
+                          {data.canTransfer && (
+                            <TableCell>
+                              {!isReturned ? (
+                                <AssetLeaseTransferAction
+                                  rentId={data.id}
+                                  rentDetailId={detail.id}
+                                  assetNumber={detail.asset.nomorAssets}
+                                  defaultTransferDate={jakartaToday()}
+                                  currentOutlet={detail.asset.outlet}
+                                  latestTransfer={detail.latestTransfer}
+                                  outlets={data.transferOutlets}
+                                  users={data.transferUsers}
+                                />
+                              ) : (
+                                <span className="text-xs text-muted-foreground">
+                                  -
+                                </span>
+                              )}
+                            </TableCell>
+                          )}
+                          {data.canReturn && (
+                            <TableCell>
+                              {isReturned ? (
+                                <span className="inline-flex rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+                                  Returned
+                                </span>
+                              ) : (
+                                <AssetLeaseReturnAction
+                                  rentId={data.id}
+                                  rentDetailId={detail.id}
+                                  assetNumber={detail.asset.nomorAssets}
+                                  defaultReturnDate={jakartaToday()}
+                                  minimumReturnDate={minimumReturnDate}
+                                  hasPendingTransfer={hasPendingTransfer}
+                                  outlets={data.returnOutlets}
+                                />
+                              )}
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      )
+                    })
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={data.canTransfer ? 6 : 5}
+                        colSpan={
+                          6 + (data.canTransfer ? 1 : 0) + (data.canReturn ? 1 : 0)
+                        }
                         className="h-24 text-center"
                       >
                         No lease details.
@@ -229,6 +273,7 @@ export default async function AssetLeaseDetailPage({
                     </TableRow>
                   )}
                 </TableBody>
+
               </Table>
             </div>
           </section>

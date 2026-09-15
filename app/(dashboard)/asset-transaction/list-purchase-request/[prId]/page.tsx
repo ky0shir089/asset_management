@@ -1,4 +1,3 @@
-import { buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BackButton } from "@/components/back-button"
 import {
@@ -10,7 +9,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { purchaseRequestShow } from "@/data/purchase-request"
-import Link from "next/link"
 import PurchaseRequestStatusActions from "../_components/PurchaseRequestStatusActions"
 
 type Params = Promise<{ prId: string }>

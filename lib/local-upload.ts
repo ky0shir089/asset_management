@@ -11,12 +11,18 @@ export interface SavedPhoto {
   path: string
 }
 
-const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"])
+const ALLOWED_MIME = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+])
 
 const MIME_EXT: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
   "image/webp": ".webp",
+  "application/pdf": ".pdf",
 }
 
 export {
@@ -47,7 +53,7 @@ export async function savePhotos(
     for (const file of files) {
       if (!ALLOWED_MIME.has(file.type)) {
         throw new Error(
-          `Invalid file type "${file.type}". Allowed: image/jpeg, image/png, image/webp`
+          `Invalid file type "${file.type}". Allowed: image/jpeg, image/png, image/webp, application/pdf`
         )
       }
       if (file.size > MAX_PHOTO_FILE_SIZE_BYTES) {
@@ -129,7 +135,7 @@ export async function saveRentPhotos(
     for (const file of files) {
       if (!ALLOWED_MIME.has(file.type)) {
         throw new Error(
-          `Invalid file type "${file.type}". Allowed: image/jpeg, image/png, image/webp`
+          `Invalid file type "${file.type}". Allowed: image/jpeg, image/png, image/webp, application/pdf`
         )
       }
       if (file.size > MAX_PHOTO_FILE_SIZE_BYTES) {

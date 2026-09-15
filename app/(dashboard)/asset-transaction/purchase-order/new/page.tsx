@@ -16,7 +16,6 @@ const RenderForm = async () => {
       purchaseRequestOptions(),
       purchaseRequestDetailOptions(),
     ])
-  // console.log(purchaseRequests)
 
   return (
     <PurchaseOrderForm

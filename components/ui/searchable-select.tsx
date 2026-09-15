@@ -81,6 +81,8 @@ export function SearchableSelect({
             disabled={disabled}
             aria-invalid={ariaInvalid}
             aria-required={required}
+            role="combobox"
+            aria-expanded={open}
             data-name={name}
           />
         }
@@ -90,7 +92,10 @@ export function SearchableSelect({
         </span>
         <ChevronDownIcon className="text-muted-foreground" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-(--anchor-width) min-w-56 p-2">
+      <DropdownMenuContent
+        align="start"
+        className="w-(--anchor-width) min-w-56 p-2"
+      >
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}

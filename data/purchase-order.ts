@@ -19,11 +19,10 @@ export async function purchaseOrderIndex(
 
   const pagination = paginationParams(currentPage, size)
   const search = query?.trim()
-  const superAdmin = await isSuperAdmin(user.id)
 
   const conditions = []
 
-  if (!superAdmin) {
+  if (user.role !== "Super Administrator" && user.role !== "Admin GA") {
     conditions.push(eq(purchaseOrders.createdBy, user.id))
   }
 
@@ -82,6 +81,17 @@ export async function purchaseOrderShow(id: string) {
         columns: {
           id: true,
           name: true,
+          address: true,
+        },
+        with: {
+          village: {
+            columns: { name: true, postalCode: true },
+            with: {
+              district: { columns: { name: true } },
+              regency: { columns: { name: true } },
+              province: { columns: { name: true } },
+            },
+          },
         },
       },
       supplierAccount: {

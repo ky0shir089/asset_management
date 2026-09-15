@@ -34,15 +34,14 @@ export async function assetLeaseIndex(
   query?: string
 ) {
   const user = await requireUser()
-  await requirePermission("asset-lease:browse")
+  await requirePermission("maintenance:browse")
 
   const pagination = paginationParams(currentPage, size)
   const search = query?.trim()
-  const superAdmin = await isSuperAdmin(user.id)
-  const canUpdate = await can("asset-lease:update")
+  const canUpdate = await can("maintenance:edit")
   const conditions: SQL[] = []
 
-  if (!superAdmin) {
+  if (user.role !== "Super Administrator" && user.role !== "Admin GA") {
     const visible = canUpdate
       ? or(eq(rentAssets.createdBy, user.id), eq(rentAssets.status, "NEW"))
       : eq(rentAssets.createdBy, user.id)
@@ -91,7 +90,10 @@ export async function assetLeaseShow(rentId: string) {
 
   const user = await requireUser()
   await requirePermission("asset-lease:read")
-  const canUpdate = await can("asset-lease:update")
+  const [canUpdate, canReturnAsset] = await Promise.all([
+    can("maintenance:edit"),
+    can("asset-lease:update"),
+  ])
 
   const data = await db.query.rentAssets.findFirst({
     where: eq(rentAssets.id, rentId),
@@ -171,7 +173,10 @@ export async function assetLeaseShow(rentId: string) {
         .from(assetTransfers)
         .innerJoin(outlets, eq(assetTransfers.outletId, outlets.id))
         .innerJoin(users, eq(assetTransfers.userId, users.id))
-        .leftJoin(confirmingUsers, eq(assetTransfers.receivedBy, confirmingUsers.id))
+        .leftJoin(
+          confirmingUsers,
+          eq(assetTransfers.receivedBy, confirmingUsers.id)
+        )
         .where(inArray(assetTransfers.rentDtlId, detailIds))
         .orderBy(
           desc(assetTransfers.transferDate),
@@ -214,6 +219,7 @@ export async function assetLeaseShow(rentId: string) {
   }
 
   const canTransfer = canUpdate && data.status === "APPROVED"
+  const canReturn = canReturnAsset && data.status === "APPROVED"
   const assetIds = data.details.map((detail) => detail.asset.id)
   let transferOutlets: Array<{
     id: string
@@ -309,6 +315,30 @@ export async function assetLeaseShow(rentId: string) {
     }
   }
 
+  const returnOutlets = canReturn
+    ? await db
+        .select({
+          id: outlets.id,
+          outletId: outlets.outletId,
+          name: outlets.name,
+        })
+        .from(outlets)
+        .innerJoin(branches, eq(outlets.branchId, branches.branchId))
+        .innerJoin(
+          companies,
+          eq(branches.companyId, companies.talentaCompanyId)
+        )
+        .where(
+          and(
+            eq(outlets.isActive, true),
+            eq(branches.isActive, true),
+            eq(companies.isActive, true),
+            eq(companies.code, "LSA")
+          )
+        )
+        .orderBy(asc(outlets.name))
+    : []
+
   return {
     ...data,
     details: data.details.map((detail) => ({
@@ -318,8 +348,10 @@ export async function assetLeaseShow(rentId: string) {
     })),
     canDecide: canUpdate && data.status === "NEW",
     canTransfer,
+    canReturn,
     transferOutlets,
     transferUsers,
+    returnOutlets,
   }
 }
 

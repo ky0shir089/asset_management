@@ -1,0 +1,3 @@
+ALTER TABLE "districts" ADD CONSTRAINT "districts_province_id_regency_id_regencies_fk" FOREIGN KEY ("province_id","regency_id") REFERENCES "public"."regencies"("province_id","code") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "villages" ADD CONSTRAINT "villages_province_id_regency_id_regencies_fk" FOREIGN KEY ("province_id","regency_id") REFERENCES "public"."regencies"("province_id","code") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "villages" ADD CONSTRAINT "villages_province_id_regency_id_district_id_districts_fk" FOREIGN KEY ("province_id","regency_id","district_id") REFERENCES "public"."districts"("province_id","regency_id","code") ON DELETE cascade ON UPDATE no action;

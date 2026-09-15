@@ -19,8 +19,8 @@ const RenderTable = async ({
   query?: string
 }) => {
   const result = await purchaseRequestIndex(currentPage, size, query)
-
   const { data, meta } = result
+  console.log(data)
 
   return <DataTable columns={columns} data={data} meta={meta} />
 }
@@ -44,7 +44,10 @@ export default async function PurchaseRequestPage({
       <div className="mb-4 flex items-center justify-between">
         <h2 className="mb-4 text-3xl font-bold">Purchase Request</h2>
 
-        <Link href="/asset-transaction/purchase-request/new" className={buttonVariants()}>
+        <Link
+          href="/asset-transaction/purchase-request/new"
+          className={buttonVariants()}
+        >
           Add New
         </Link>
       </div>
@@ -53,7 +56,7 @@ export default async function PurchaseRequestPage({
 
       <Suspense
         key={`${query}-${currentPage}-${size}`}
-        fallback={<DataTableSkeleton columns={7} />}
+        fallback={<DataTableSkeleton columns={11} />}
       >
         <RenderTable query={query} currentPage={currentPage} size={size} />
       </Suspense>

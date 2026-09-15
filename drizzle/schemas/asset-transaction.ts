@@ -167,6 +167,7 @@ export const assetDatas = pgTable(
     status: varchar("status", { length: 255 }).notNull().default("TERSEDIA"),
     nomorAssets: varchar("nomor_assets", { length: 255 }).notNull(),
     qrCodePath: varchar("qr_code_path", { length: 255 }),
+    serialNumber: varchar("serial_number", { length: 255 }),
     createdBy: text("created_by")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),

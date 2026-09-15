@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-26T12:24:40.5779344+07:00",
+  "title": "Design System: Asset Management",
+  "extensions": {
+    "colorMeta": {
+      "ledger-white": { "role": "neutral", "displayName": "Ledger White", "canonical": "oklch(1 0 0)", "tonalRamp": ["oklch(0.15 0 0)", "oklch(0.27 0 0)", "oklch(0.39 0 0)", "oklch(0.51 0 0)", "oklch(0.63 0 0)", "oklch(0.75 0 0)", "oklch(0.87 0 0)", "oklch(0.95 0 0)"] },
+      "ledger-ink": { "role": "neutral", "displayName": "Ledger Ink", "canonical": "oklch(0.141 0.005 285.823)", "tonalRamp": ["oklch(0.15 0.005 285.823)", "oklch(0.27 0.005 285.823)", "oklch(0.39 0.005 285.823)", "oklch(0.51 0.005 285.823)", "oklch(0.63 0.005 285.823)", "oklch(0.75 0.005 285.823)", "oklch(0.87 0.005 285.823)", "oklch(0.95 0.005 285.823)"] },
+      "deep-zinc": { "role": "primary", "displayName": "Deep Zinc", "canonical": "oklch(0.21 0.006 285.885)", "tonalRamp": ["oklch(0.15 0.006 285.885)", "oklch(0.27 0.006 285.885)", "oklch(0.39 0.006 285.885)", "oklch(0.51 0.006 285.885)", "oklch(0.63 0.006 285.885)", "oklch(0.75 0.006 285.885)", "oklch(0.87 0.006 285.885)", "oklch(0.95 0.006 285.885)"] },
+      "quiet-zinc": { "role": "secondary", "displayName": "Quiet Zinc", "canonical": "oklch(0.967 0.001 286.375)", "tonalRamp": ["oklch(0.15 0.001 286.375)", "oklch(0.27 0.001 286.375)", "oklch(0.39 0.001 286.375)", "oklch(0.51 0.001 286.375)", "oklch(0.63 0.001 286.375)", "oklch(0.75 0.001 286.375)", "oklch(0.87 0.001 286.375)", "oklch(0.95 0.001 286.375)"] },
+      "muted-zinc": { "role": "neutral", "displayName": "Muted Zinc", "canonical": "oklch(0.552 0.016 285.938)", "tonalRamp": ["oklch(0.15 0.016 285.938)", "oklch(0.27 0.016 285.938)", "oklch(0.39 0.016 285.938)", "oklch(0.51 0.016 285.938)", "oklch(0.63 0.016 285.938)", "oklch(0.75 0.016 285.938)", "oklch(0.87 0.016 285.938)", "oklch(0.95 0.016 285.938)"] },
+      "rule-zinc": { "role": "neutral", "displayName": "Rule Zinc", "canonical": "oklch(0.92 0.004 286.32)", "tonalRamp": ["oklch(0.15 0.004 286.32)", "oklch(0.27 0.004 286.32)", "oklch(0.39 0.004 286.32)", "oklch(0.51 0.004 286.32)", "oklch(0.63 0.004 286.32)", "oklch(0.75 0.004 286.32)", "oklch(0.87 0.004 286.32)", "oklch(0.95 0.004 286.32)"] },
+      "focus-zinc": { "role": "neutral", "displayName": "Focus Zinc", "canonical": "oklch(0.705 0.015 286.067)", "tonalRamp": ["oklch(0.15 0.015 286.067)", "oklch(0.27 0.015 286.067)", "oklch(0.39 0.015 286.067)", "oklch(0.51 0.015 286.067)", "oklch(0.63 0.015 286.067)", "oklch(0.75 0.015 286.067)", "oklch(0.87 0.015 286.067)", "oklch(0.95 0.015 286.067)"] },
+      "raised-zinc": { "role": "secondary", "displayName": "Raised Zinc", "canonical": "oklch(0.274 0.006 286.033)", "tonalRamp": ["oklch(0.15 0.006 286.033)", "oklch(0.27 0.006 286.033)", "oklch(0.39 0.006 286.033)", "oklch(0.51 0.006 286.033)", "oklch(0.63 0.006 286.033)", "oklch(0.75 0.006 286.033)", "oklch(0.87 0.006 286.033)", "oklch(0.95 0.006 286.033)"] },
+      "alert-red": { "role": "tertiary", "displayName": "Alert Red", "canonical": "oklch(0.577 0.245 27.325)", "tonalRamp": ["oklch(0.15 0.245 27.325)", "oklch(0.27 0.245 27.325)", "oklch(0.39 0.245 27.325)", "oklch(0.51 0.245 27.325)", "oklch(0.63 0.245 27.325)", "oklch(0.75 0.245 27.325)", "oklch(0.87 0.245 27.325)", "oklch(0.95 0.245 27.325)"] },
+      "alert-coral": { "role": "tertiary", "displayName": "Alert Coral", "canonical": "oklch(0.704 0.191 22.216)", "tonalRamp": ["oklch(0.15 0.191 22.216)", "oklch(0.27 0.191 22.216)", "oklch(0.39 0.191 22.216)", "oklch(0.51 0.191 22.216)", "oklch(0.63 0.191 22.216)", "oklch(0.75 0.191 22.216)", "oklch(0.87 0.191 22.216)", "oklch(0.95 0.191 22.216)"] },
+      "active-blue": { "role": "primary", "displayName": "Active Blue", "canonical": "oklch(0.488 0.243 264.376)", "tonalRamp": ["oklch(0.15 0.243 264.376)", "oklch(0.27 0.243 264.376)", "oklch(0.39 0.243 264.376)", "oklch(0.51 0.243 264.376)", "oklch(0.63 0.243 264.376)", "oklch(0.75 0.243 264.376)", "oklch(0.87 0.243 264.376)", "oklch(0.95 0.243 264.376)"] },
+      "ledger-white-10": { "role": "neutral", "displayName": "Ledger White 10", "canonical": "oklch(1 0 0 / 10%)", "tonalRamp": ["oklch(0.15 0 0 / 10%)", "oklch(0.27 0 0 / 10%)", "oklch(0.39 0 0 / 10%)", "oklch(0.51 0 0 / 10%)", "oklch(0.63 0 0 / 10%)", "oklch(0.75 0 0 / 10%)", "oklch(0.87 0 0 / 10%)", "oklch(0.95 0 0 / 10%)"] },
+      "ledger-white-15": { "role": "neutral", "displayName": "Ledger White 15", "canonical": "oklch(1 0 0 / 15%)", "tonalRamp": ["oklch(0.15 0 0 / 15%)", "oklch(0.27 0 0 / 15%)", "oklch(0.39 0 0 / 15%)", "oklch(0.51 0 0 / 15%)", "oklch(0.63 0 0 / 15%)", "oklch(0.75 0 0 / 15%)", "oklch(0.87 0 0 / 15%)", "oklch(0.95 0 0 / 15%)"] },
+      "chart-blue": { "role": "tertiary", "displayName": "Chart Blue", "canonical": "#2a78d6", "tonalRamp": ["#071b34", "#0d3567", "#154f9b", "#2069c0", "#4788d3", "#76a8e0", "#abcbed", "#e1ebf9"] },
+      "chart-orange": { "role": "tertiary", "displayName": "Chart Orange", "canonical": "#eb6834", "tonalRamp": ["#351207", "#67240e", "#993817", "#c04e25", "#db7148", "#e99873", "#f3c1a7", "#fbe8df"] },
+      "chart-green": { "role": "tertiary", "displayName": "Chart Green", "canonical": "#1baf7a", "tonalRamp": ["#06291c", "#0b5239", "#117b55", "#189b6d", "#42b98c", "#74ccaa", "#aae0ca", "#dff4e9"] },
+      "chart-amber": { "role": "tertiary", "displayName": "Chart Amber", "canonical": "#eda100", "tonalRamp": ["#332000", "#664100", "#996300", "#c48100", "#dfa629", "#eabd61", "#f3d59b", "#faefd6"] },
+      "chart-pink": { "role": "tertiary", "displayName": "Chart Pink", "canonical": "#e87ba4", "tonalRamp": ["#331522", "#652b43", "#954064", "#bb5b82", "#d47da0", "#e3a3ba", "#efc7d6", "#fae8ef"] },
+      "chart-blue-dark": { "role": "tertiary", "displayName": "Chart Blue Dark", "canonical": "#3987e5", "tonalRamp": ["#071b34", "#0d3567", "#154f9b", "#2069c0", "#4788d3", "#76a8e0", "#abcbed", "#e1ebf9"] },
+      "chart-orange-dark": { "role": "tertiary", "displayName": "Chart Orange Dark", "canonical": "#d95926", "tonalRamp": ["#351207", "#67240e", "#993817", "#c04e25", "#db7148", "#e99873", "#f3c1a7", "#fbe8df"] },
+      "chart-green-dark": { "role": "tertiary", "displayName": "Chart Green Dark", "canonical": "#199e70", "tonalRamp": ["#06291c", "#0b5239", "#117b55", "#189b6d", "#42b98c", "#74ccaa", "#aae0ca", "#dff4e9"] },
+      "chart-amber-dark": { "role": "tertiary", "displayName": "Chart Amber Dark", "canonical": "#c98500", "tonalRamp": ["#332000", "#664100", "#996300", "#c48100", "#dfa629", "#eabd61", "#f3d59b", "#faefd6"] },
+      "chart-pink-dark": { "role": "tertiary", "displayName": "Chart Pink Dark", "canonical": "#d55181", "tonalRamp": ["#331522", "#652b43", "#954064", "#bb5b82", "#d47da0", "#e3a3ba", "#efc7d6", "#fae8ef"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Rare page-level overview headings." },
+      "headline": { "displayName": "Headline", "purpose": "Main page headings and major dashboard regions." },
+      "title": { "displayName": "Title", "purpose": "Section and panel headings." },
+      "body": { "displayName": "Body", "purpose": "Default UI text and table content." },
+      "label": { "displayName": "Label", "purpose": "Compact metadata and chart labels." }
+    },
+    "shadows": [
+      { "name": "compact-float", "value": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)", "purpose": "Select and dropdown content." },
+      { "name": "raised-overlay", "value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)", "purpose": "Large floating surfaces only when border and backdrop are insufficient." }
+    ],
+    "motion": [
+      { "name": "state", "value": "150ms cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default component state transition." },
+      { "name": "sidebar", "value": "200ms linear", "purpose": "Sidebar expand and collapse." },
+      { "name": "overlay", "value": "100ms cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Menu and dialog entrance or exit." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" },
+      { "name": "2xl", "value": "1536px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Default action for one clear next step.",
+      "html": "<button class=\"ds-btn-primary\">Save asset</button>",
+      "css": ".ds-btn-primary { display:inline-flex; align-items:center; justify-content:center; gap:6px; height:32px; padding:0 10px; border:1px solid transparent; border-radius:var(--radius); background:var(--primary); color:var(--primary-foreground); font:500 14px/1 var(--font-sans, Roboto, sans-serif); white-space:nowrap; cursor:pointer; transition:background-color 150ms cubic-bezier(.4,0,.2,1),border-color 150ms cubic-bezier(.4,0,.2,1),box-shadow 150ms cubic-bezier(.4,0,.2,1),transform 150ms cubic-bezier(.4,0,.2,1); } .ds-btn-primary:hover { background:color-mix(in oklab,var(--primary) 90%,transparent); } .ds-btn-primary:focus-visible { outline:none; border-color:var(--ring); box-shadow:0 0 0 3px color-mix(in oklab,var(--ring) 50%,transparent); } .ds-btn-primary:active { transform:translateY(1px); } .ds-btn-primary:disabled { pointer-events:none; opacity:.5; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Supporting action beside a primary action.",
+      "html": "<button class=\"ds-btn-secondary\">Cancel</button>",
+      "css": ".ds-btn-secondary { display:inline-flex; align-items:center; justify-content:center; gap:6px; height:32px; padding:0 10px; border:1px solid transparent; border-radius:var(--radius); background:var(--secondary); color:var(--secondary-foreground); font:500 14px/1 var(--font-sans, Roboto, sans-serif); white-space:nowrap; cursor:pointer; transition:background-color 150ms cubic-bezier(.4,0,.2,1),border-color 150ms cubic-bezier(.4,0,.2,1),box-shadow 150ms cubic-bezier(.4,0,.2,1),transform 150ms cubic-bezier(.4,0,.2,1); } .ds-btn-secondary:hover { background:color-mix(in oklab,var(--secondary) 80%,transparent); } .ds-btn-secondary:focus-visible { outline:none; border-color:var(--ring); box-shadow:0 0 0 3px color-mix(in oklab,var(--ring) 50%,transparent); } .ds-btn-secondary:active { transform:translateY(1px); } .ds-btn-secondary:disabled { pointer-events:none; opacity:.5; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Compact field for asset data and search.",
+      "html": "<input class=\"ds-input\" placeholder=\"Asset code\" aria-label=\"Asset code\">",
+      "css": ".ds-input { width:100%; height:32px; padding:4px 10px; border:1px solid var(--input); border-radius:var(--radius); background:transparent; color:var(--foreground); font:400 14px/1.4 var(--font-sans, Roboto, sans-serif); transition:border-color 150ms cubic-bezier(.4,0,.2,1),box-shadow 150ms cubic-bezier(.4,0,.2,1); } .ds-input::placeholder { color:var(--muted-foreground); opacity:1; } .ds-input:hover { border-color:var(--ring); } .ds-input:focus-visible { outline:none; border-color:var(--ring); box-shadow:0 0 0 3px color-mix(in oklab,var(--ring) 50%,transparent); } .ds-input:disabled { opacity:.5; background:color-mix(in oklab,var(--input) 50%,transparent); } .ds-input[aria-invalid=\"true\"] { border-color:var(--destructive); box-shadow:0 0 0 3px color-mix(in oklab,var(--destructive) 20%,transparent); }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Compact non-color-only status label.",
+      "html": "<span class=\"ds-badge\">In transit</span>",
+      "css": ".ds-badge { display:inline-flex; align-items:center; justify-content:center; height:20px; padding:2px 8px; border:1px solid transparent; border-radius:calc(var(--radius) + 16px); background:var(--secondary); color:var(--secondary-foreground); font:500 12px/1 var(--font-sans, Roboto, sans-serif); white-space:nowrap; transition:background-color 150ms cubic-bezier(.4,0,.2,1),box-shadow 150ms cubic-bezier(.4,0,.2,1); } .ds-badge:hover { background:color-mix(in oklab,var(--secondary) 80%,transparent); } .ds-badge:focus-visible { outline:none; box-shadow:0 0 0 3px color-mix(in oklab,var(--ring) 50%,transparent); }"
+    },
+    {
+      "name": "Operational Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Flat bordered container for related operational content.",
+      "html": "<section class=\"ds-card\"><h3>Asset details</h3><p>Ownership, location, and lifecycle status.</p></section>",
+      "css": ".ds-card { display:flex; flex-direction:column; gap:16px; padding:16px; border-radius:calc(var(--radius) + 4px); background:var(--card); color:var(--card-foreground); box-shadow:0 0 0 1px color-mix(in oklab,var(--foreground) 10%,transparent); font-family:var(--font-sans, Roboto, sans-serif); } .ds-card h3 { margin:0; font-size:16px; font-weight:500; line-height:1.375; } .ds-card p { margin:0; max-width:70ch; color:var(--muted-foreground); font-size:14px; line-height:1.5; }"
+    },
+    {
+      "name": "Sidebar Item",
+      "kind": "nav",
+      "description": "Role-aware navigation item with current-route emphasis.",
+      "html": "<a class=\"ds-nav-item\" href=\"#\" aria-current=\"page\">Asset transfers</a>",
+      "css": ".ds-nav-item { display:flex; align-items:center; width:100%; height:32px; padding:8px; border-radius:calc(var(--radius) - 2px); color:var(--sidebar-foreground); font:400 14px/1 var(--font-sans, Roboto, sans-serif); text-decoration:none; transition:background-color 150ms cubic-bezier(.4,0,.2,1),color 150ms cubic-bezier(.4,0,.2,1),box-shadow 150ms cubic-bezier(.4,0,.2,1); } .ds-nav-item:hover,.ds-nav-item[aria-current=\"page\"] { background:var(--sidebar-accent); color:var(--sidebar-accent-foreground); } .ds-nav-item:focus-visible { outline:none; box-shadow:0 0 0 2px var(--sidebar-ring); }"
+    },
+    {
+      "name": "Data Table",
+      "kind": "custom",
+      "description": "Compact horizontally scrollable operational ledger.",
+      "html": "<div class=\"ds-table-wrap\"><table class=\"ds-table\"><thead><tr><th>Asset</th><th>Status</th><th>Location</th></tr></thead><tbody><tr><td>AST-0241</td><td>Assigned</td><td>Jakarta</td></tr></tbody></table></div>",
+      "css": ".ds-table-wrap { max-width:100%; overflow-x:auto; border-radius:var(--radius); box-shadow:0 0 0 1px var(--border); } .ds-table { width:100%; border-collapse:collapse; color:var(--foreground); background:var(--background); font:400 14px/1.4 var(--font-sans, Roboto, sans-serif); } .ds-table th { height:40px; padding:0 8px; border-bottom:1px solid var(--border); text-align:left; font-weight:500; white-space:nowrap; } .ds-table td { padding:8px; border-bottom:1px solid var(--border); white-space:nowrap; } .ds-table tbody tr:hover { background:color-mix(in oklab,var(--muted) 50%,transparent); } .ds-table tbody tr:focus-within { outline:2px solid var(--ring); outline-offset:-2px; }"
+    },
+    {
+      "name": "Select Control",
+      "kind": "input",
+      "description": "Native preview of compact selector vocabulary.",
+      "html": "<select class=\"ds-select\" aria-label=\"Asset status\"><option>Assigned</option><option>In transit</option></select>",
+      "css": ".ds-select { min-width:144px; height:32px; padding:0 28px 0 10px; border:1px solid var(--input); border-radius:var(--radius); background:var(--background); color:var(--foreground); font:400 14px/1 var(--font-sans, Roboto, sans-serif); transition:border-color 150ms cubic-bezier(.4,0,.2,1),box-shadow 150ms cubic-bezier(.4,0,.2,1); } .ds-select:hover { border-color:var(--ring); } .ds-select:focus-visible { outline:none; border-color:var(--ring); box-shadow:0 0 0 3px color-mix(in oklab,var(--ring) 50%,transparent); } .ds-select:disabled { opacity:.5; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Operations Ledger",
+    "overview": "Asset Management should feel like a dependable operational record: composed, legible, and ready for daily work. Quiet Zinc neutrals keep attention on asset state, ownership, location, and next action. Familiar controls reduce interpretation cost for operators moving between forms, tables, approvals, and transaction history.\n\nThis is a restrained product system, not a marketing surface. Density is welcome when it improves scanning, but hierarchy, validation, and status must remain obvious. Light and dark themes are equal working environments. Motion communicates state only and never delays task completion.",
+    "keyCharacteristics": ["Quiet Zinc neutral foundation with sparse semantic color.", "Compact, familiar, and consistent product controls.", "Tonal and bordered separation before shadow.", "Clear state, ownership, location, and action hierarchy.", "Equal light and dark theme support."],
+    "rules": [
+      { "name": "The One Operational Accent Rule", "body": "Accent color marks primary action, current selection, status, or data series. It never decorates empty space.", "section": "colors" },
+      { "name": "The Theme Parity Rule", "body": "Every semantic role must preserve meaning and contrast in both light and dark themes; never treat dark mode as a color inversion afterthought.", "section": "colors" },
+      { "name": "The No Color-Only Rule", "body": "Error, success, warning, selected, and pending states always include text, iconography, shape, or another non-color cue.", "section": "colors" },
+      { "name": "The One-Family Rule", "body": "Roboto carries all product hierarchy. Never introduce a display face for labels, buttons, data, or navigation.", "section": "typography" },
+      { "name": "The Data First Rule", "body": "Tabular values remain easy to scan. Do not shrink important values below 0.75rem or use muted contrast for operationally significant data.", "section": "typography" },
+      { "name": "The Bordered-First Rule", "body": "Persistent containers are flat at rest. If every card casts a shadow, hierarchy has failed.", "section": "elevation" },
+      { "name": "The Floating-Layer Rule", "body": "Shadow means content escaped normal document flow. Never use it as decoration.", "section": "elevation" }
+    ],
+    "dos": ["Do make current asset state, ownership, location, and next valid action obvious.", "Do use semantic CSS variables so light and dark themes preserve identical meaning.", "Do use the 0.25rem spacing unit and existing radius scale before inventing new values.", "Do keep controls compact while preserving keyboard access, visible focus, and readable 0.875rem labels.", "Do keep wide tables inside their own horizontal scroll container so the page body never scrolls sideways.", "Do use skeletons for content loading and task-specific empty states that explain the next action.", "Do disable nonessential transition and entrance motion under prefers-reduced-motion: reduce."],
+    "donts": ["Don't use decorative SaaS styling: gradients, glossy or excessive cards, marketing-style metrics, ornamental motion, or visual effects that distract from operational work.", "Don't use colored side-stripe borders on cards, filters, alerts, or list items.", "Don't repeat identical metric cards when grouping, hierarchy, or direct comparison communicates more clearly.", "Don't use gradient text, decorative glassmorphism, or saturation on inactive states.", "Don't use tiny uppercase tracked labels as repeated section scaffolding.", "Don't use shadow on every container; shadow means a floating layer.", "Don't rely on color alone for validation, status, selection, or chart interpretation.", "Don't introduce a second UI font, custom form affordance, or decorative animation without a task-driven need."]
+  }
+}

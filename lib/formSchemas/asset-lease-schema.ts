@@ -5,7 +5,21 @@ import {
 } from "@/lib/upload-constants"
 import z from "zod"
 
-const acceptedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"])
+const acceptedPhotoTypes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+])
+
+function jakartaToday() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date())
+}
 
 export const rentPhotoFilesSchema = z
   .array(z.instanceof(File))
@@ -20,7 +34,7 @@ export const rentPhotoFilesSchema = z
         ctx.addIssue({
           code: "custom",
           path: [index],
-          message: "Photos must be JPEG, PNG, or WebP",
+          message: "Photos must be JPEG, PNG, WebP, or PDF",
         })
       }
       if (file.size > MAX_PHOTO_FILE_SIZE_BYTES) {
@@ -97,6 +111,19 @@ export const assetLeaseRejectSchema = z.object({
     .array(assetLeaseDecisionDetailSchema)
     .min(1, "Asset lease has no details"),
 })
+
+export const assetLeaseReturnSchema = z.object({
+  rentId: z.uuid("Asset lease not found"),
+  rentDetailId: z.uuid("Leased asset not found"),
+  dateEnd: z
+    .iso
+    .date("Return date is required")
+    .refine((date) => date <= jakartaToday(), "Return date cannot be in the future"),
+  outletId: z.uuid("Receiving outlet is required"),
+  photos: rentPhotoFilesSchema,
+})
+
+export type assetLeaseReturnSchemaType = z.infer<typeof assetLeaseReturnSchema>
 
 export type assetLeaseDecisionDetailType = z.infer<
   typeof assetLeaseDecisionDetailSchema

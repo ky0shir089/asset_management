@@ -6,7 +6,8 @@ import {
   MAX_PHOTO_FILE_SIZE_BYTES,
   MAX_PHOTO_FILE_SIZE_MB,
 } from "@/lib/upload-constants"
-import { ImagePlus, X } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { FileText, ImagePlus, X } from "lucide-react"
 import Image from "next/image"
 import {
   useCallback,
@@ -19,7 +20,12 @@ import {
 } from "react"
 import { toast } from "sonner"
 
-const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"]
+const ACCEPTED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+]
 
 export default function AssetLeasePhotoInput({
   files,
@@ -38,14 +44,19 @@ export default function AssetLeasePhotoInput({
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
-  const [lightbox, setLightbox] = useState<{ url: string; name: string } | null>(
-    null
-  )
+  const [lightbox, setLightbox] = useState<{
+    url: string
+    name: string
+    isPdf?: boolean
+  } | null>(null)
   const previews = useMemo(
     () =>
       files.map((file) => ({
         name: file.name,
         url: URL.createObjectURL(file),
+        isPdf:
+          file.type === "application/pdf" ||
+          file.name.toLowerCase().endsWith(".pdf"),
       })),
     [files]
   )
@@ -77,7 +88,7 @@ export default function AssetLeasePhotoInput({
         toast.error(`Upload at most ${MAX_PHOTO_FILE_COUNT} photos`)
       if (rejectedTypes.length)
         toast.error(
-          `${rejectedTypes.join(", ")} must be JPEG, PNG, or WebP files`
+          `${rejectedTypes.join(", ")} must be JPEG, PNG, WebP, or PDF files`
         )
       if (rejectedSizes.length)
         toast.error(
@@ -138,14 +149,14 @@ export default function AssetLeasePhotoInput({
         }`}
       >
         <ImagePlus className="mb-1 size-6" />
-        <span>Drop photos here or click to browse</span>
-        <span className="text-xs">JPG, PNG, WebP</span>
+        <span>Drop files here or click to browse</span>
+        <span className="text-xs">JPG, PNG, WebP, PDF</span>
         <input
           ref={inputRef}
           id={id}
           type="file"
           multiple
-          accept="image/jpeg,image/png,image/webp"
+          accept="image/jpeg,image/png,image/webp,application/pdf"
           className="hidden"
           disabled={disabled}
           onChange={(event) => {
@@ -166,14 +177,23 @@ export default function AssetLeasePhotoInput({
                 className="cursor-pointer disabled:cursor-not-allowed"
                 aria-label={`Preview ${preview.name}`}
               >
-                <Image
-                  src={preview.url}
-                  alt={preview.name}
-                  width={0}
-                  height={0}
-                  unoptimized
-                  className="size-28 rounded-md border object-cover"
-                />
+                {preview.isPdf ? (
+                  <div className="flex size-28 flex-col items-center justify-center rounded-md border bg-muted/40 p-2 text-center">
+                    <FileText className="size-8 text-muted-foreground" />
+                    <span className="mt-1 line-clamp-2 max-w-full text-xs text-muted-foreground break-all">
+                      {preview.name}
+                    </span>
+                  </div>
+                ) : (
+                  <Image
+                    src={preview.url}
+                    alt={preview.name}
+                    width={0}
+                    height={0}
+                    unoptimized
+                    className="size-28 rounded-md border object-cover"
+                  />
+                )}
               </button>
               <button
                 type="button"
@@ -195,20 +215,30 @@ export default function AssetLeasePhotoInput({
           if (!open) setLightbox(null)
         }}
       >
-        <DialogContent className="sm:max-w-lg" showCloseButton>
+        <DialogContent
+          className={cn("sm:max-w-lg", lightbox?.isPdf && "sm:max-w-3xl")}
+          showCloseButton
+        >
           <DialogTitle className="sr-only">
             {lightbox?.name ?? "Photo preview"}
           </DialogTitle>
-          {lightbox && (
-            <Image
-              src={lightbox.url}
-              alt={lightbox.name}
-              width={0}
-              height={0}
-              unoptimized
-              className="h-auto w-full rounded-md object-contain"
-            />
-          )}
+          {lightbox &&
+            (lightbox.isPdf ? (
+              <iframe
+                src={lightbox.url}
+                title={lightbox.name}
+                className="h-[70vh] w-full rounded-md border"
+              />
+            ) : (
+              <Image
+                src={lightbox.url}
+                alt={lightbox.name}
+                width={0}
+                height={0}
+                unoptimized
+                className="h-auto w-full rounded-md object-contain"
+              />
+            ))}
         </DialogContent>
       </Dialog>
     </div>

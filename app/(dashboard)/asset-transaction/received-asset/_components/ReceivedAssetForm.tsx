@@ -1,16 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import { LoadingSwap } from "@/components/ui/loading-swap"
-import { SearchableSelect } from "@/components/ui/searchable-select"
 import type {
   outletOptionType,
   purchaseOrderDetailOptionForReceiveType,
@@ -19,14 +10,15 @@ import { useRouter } from "next/navigation"
 import { useMemo, useState, useTransition } from "react"
 import { toast } from "sonner"
 import { receivedAssetStore } from "../action"
+import {
+  AssetItemFieldsSection,
+  type PhotoGroup,
+} from "./AssetItemFieldsSection"
+import { ReceiveInfoSection } from "./ReceiveInfoSection"
+import { SelectedPoLineSummary } from "./SelectedPoLineSummary"
 
 const MAX_PHOTO_FILE_SIZE_MB = 1
 const MAX_PHOTO_FILE_SIZE_BYTES = MAX_PHOTO_FILE_SIZE_MB * 1024 * 1024
-
-interface PhotoGroup {
-  files: File[]
-  oversizedFileNames: string[]
-}
 
 function createEmptyPhotoGroups(count: number): PhotoGroup[] {
   return Array.from({ length: count }, () => ({
@@ -35,33 +27,19 @@ function createEmptyPhotoGroups(count: number): PhotoGroup[] {
   }))
 }
 
+function createEmptySerialNumbers(count: number): string[] {
+  return Array.from({ length: count }, () => "")
+}
+
 interface ReceivedAssetFormProps {
   poDetails: purchaseOrderDetailOptionForReceiveType[]
   outlets: outletOptionType[]
-}
-
-function SummaryItem({
-  label,
-  value,
-}: {
-  label: string
-  value: string | number
-}) {
-  return (
-    <div className="rounded-md border bg-muted/30 p-3">
-      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        {label}
-      </p>
-      <p className="mt-1 font-medium">{value}</p>
-    </div>
-  )
 }
 
 export default function ReceivedAssetForm({
   poDetails,
   outlets,
 }: ReceivedAssetFormProps) {
-  console.log({ poDetails, outlets })
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
@@ -72,6 +50,9 @@ export default function ReceivedAssetForm({
   const [receivedQuantity, setReceivedQuantity] = useState(1)
   const [photoGroups, setPhotoGroups] = useState<PhotoGroup[]>(
     createEmptyPhotoGroups(1)
+  )
+  const [serialNumbers, setSerialNumbers] = useState<string[]>(
+    createEmptySerialNumbers(1)
   )
 
   const purchaseOrderItems = useMemo(() => {
@@ -94,10 +75,8 @@ export default function ReceivedAssetForm({
     [poDetails, selectedPoId]
   )
 
-  // Reset outlet when PO detail changes (company may differ)
   const selectedPoDetail = poDetails.find((d) => d.id === selectedPoDetailId)
 
-  // Filter outlets to selected PO detail company
   const filteredOutlets = useMemo(
     () =>
       selectedPoDetail
@@ -129,7 +108,6 @@ export default function ReceivedAssetForm({
     { label: "BEKAS dan RUSAK", value: "BEKAS dan RUSAK" },
   ]
 
-  const selectedSpecifications = selectedPoDetail?.specifications ?? []
   const maxReceivableQuantity = selectedPoDetail?.remainingQuantity ?? 1
   const hasOversizedFiles = photoGroups.some(
     (group) => group.oversizedFileNames.length > 0
@@ -141,6 +119,7 @@ export default function ReceivedAssetForm({
     setSelectedOutletId("")
     setReceivedQuantity(1)
     setPhotoGroups(createEmptyPhotoGroups(1))
+    setSerialNumbers(createEmptySerialNumbers(1))
   }
 
   function handlePoDetailChange(value: string) {
@@ -148,6 +127,7 @@ export default function ReceivedAssetForm({
     setSelectedOutletId("")
     setReceivedQuantity(1)
     setPhotoGroups(createEmptyPhotoGroups(1))
+    setSerialNumbers(createEmptySerialNumbers(1))
   }
 
   function handleReceivedQuantityChange(
@@ -164,6 +144,15 @@ export default function ReceivedAssetForm({
         { length: nextQuantity },
         (_, index) => current[index] ?? { files: [], oversizedFileNames: [] }
       )
+    )
+    setSerialNumbers((current) =>
+      Array.from({ length: nextQuantity }, (_, index) => current[index] ?? "")
+    )
+  }
+
+  function handleSerialNumberChange(index: number, value: string) {
+    setSerialNumbers((current) =>
+      current.map((item, i) => (i === index ? value : item))
     )
   }
 
@@ -209,16 +198,6 @@ export default function ReceivedAssetForm({
       return
     }
 
-    const missingPhotoGroupIndex = photoGroups.findIndex(
-      (group) => group.files.length < 1
-    )
-    if (missingPhotoGroupIndex >= 0) {
-      toast.error(
-        `Please upload at least one asset photo for asset ${missingPhotoGroupIndex + 1}`
-      )
-      return
-    }
-
     if (hasOversizedFiles) {
       toast.error(
         `Replace photos over ${MAX_PHOTO_FILE_SIZE_MB} MB before submitting`
@@ -232,6 +211,12 @@ export default function ReceivedAssetForm({
     formData.set("outletId", selectedOutletId)
     formData.set("condition", condition)
     formData.set("receivedQuantity", String(receivedQuantity))
+
+    serialNumbers.forEach((sn, index) => {
+      if (sn.trim()) {
+        formData.set(`serialNumber-${index}`, sn.trim())
+      }
+    })
 
     photoGroups.forEach((group, groupIndex) => {
       for (const file of group.files) {
@@ -253,223 +238,38 @@ export default function ReceivedAssetForm({
 
   return (
     <form id="form" onSubmit={handleSubmit} className="flex flex-col gap-8">
-      <div className="rounded-lg border p-4">
-        <h3 className="mb-4 font-semibold">Receive Asset Info</h3>
-        <FieldGroup>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Field>
-              <FieldLabel htmlFor="poId">Purchase Order</FieldLabel>
-              <SearchableSelect
-                id="poId"
-                name="poId"
-                options={purchaseOrderItems}
-                value={selectedPoId}
-                onValueChange={handlePurchaseOrderChange}
-                placeholder="Select PO number"
-                searchPlaceholder="Search PO number..."
-                emptyMessage="No receivable purchase orders"
-                required
-              />
-            </Field>
+      <ReceiveInfoSection
+        selectedPoId={selectedPoId}
+        selectedPoDetailId={selectedPoDetailId}
+        selectedOutletId={selectedOutletId}
+        condition={condition}
+        receivedQuantity={receivedQuantity}
+        maxReceivableQuantity={maxReceivableQuantity}
+        purchaseOrderItems={purchaseOrderItems}
+        poDetailItems={poDetailItems}
+        outletItems={outletItems}
+        conditionItems={conditionItems}
+        selectedPoDetail={selectedPoDetail}
+        onPurchaseOrderChange={handlePurchaseOrderChange}
+        onPoDetailChange={handlePoDetailChange}
+        onOutletChange={setSelectedOutletId}
+        onConditionChange={setCondition}
+        onQuantityChange={handleReceivedQuantityChange}
+      />
 
-            <Field>
-              <FieldLabel htmlFor="poDetailId">Asset</FieldLabel>
-              <SearchableSelect
-                id="poDetailId"
-                name="poDetailId"
-                options={poDetailItems}
-                value={selectedPoDetailId}
-                onValueChange={handlePoDetailChange}
-                placeholder="Select asset"
-                searchPlaceholder="Search asset..."
-                emptyMessage={
-                  selectedPoId ? "No receivable assets" : "Select PO first"
-                }
-                disabled={!selectedPoId}
-                required
-              />
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="outletId">Outlet</FieldLabel>
-              <SearchableSelect
-                id="outletId"
-                name="outletId"
-                options={outletItems}
-                value={selectedOutletId}
-                onValueChange={setSelectedOutletId}
-                placeholder="Select Outlet"
-                searchPlaceholder="Search outlet..."
-                emptyMessage={
-                  selectedPoDetail
-                    ? "No outlets for this company"
-                    : "Select PO line first"
-                }
-                disabled={!selectedPoDetail}
-                required
-              />
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="condition">Condition</FieldLabel>
-              <SearchableSelect
-                id="condition"
-                name="condition"
-                options={conditionItems}
-                value={condition}
-                onValueChange={setCondition}
-                placeholder="Select condition"
-                required
-              />
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="receivedQuantity">
-                Received Quantity
-              </FieldLabel>
-              <Input
-                id="receivedQuantity"
-                name="receivedQuantity"
-                type="number"
-                min={1}
-                max={maxReceivableQuantity}
-                value={receivedQuantity}
-                onChange={handleReceivedQuantityChange}
-                disabled={!selectedPoDetail}
-                required
-              />
-              <FieldDescription>
-                Maximum receivable:{" "}
-                {selectedPoDetail ? maxReceivableQuantity : 0}
-              </FieldDescription>
-            </Field>
-          </div>
-        </FieldGroup>
-      </div>
-
-      {/* Selected PO line summary */}
       {selectedPoDetail && (
-        <div className="rounded-lg border p-4">
-          <div className="mb-4 flex flex-col gap-1">
-            <h3 className="font-semibold">Selected PO line</h3>
-            <p className="text-sm text-muted-foreground">
-              Review company, asset, specification, and remaining quantity
-              before receiving.
-            </p>
-          </div>
-
-          <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-6">
-            <SummaryItem label="PO number" value={selectedPoDetail.poNo} />
-            <SummaryItem
-              label="Company"
-              value={`${selectedPoDetail.company.code} - ${selectedPoDetail.company.name}`}
-            />
-            <SummaryItem
-              label="Asset"
-              value={selectedPoDetail.assetCode?.name ?? "-"}
-            />
-            <SummaryItem label="Ordered" value={selectedPoDetail.quantity} />
-            <SummaryItem
-              label="Received"
-              value={selectedPoDetail.receivedQuantity}
-            />
-            <SummaryItem
-              label="Remaining"
-              value={selectedPoDetail.remainingQuantity}
-            />
-          </div>
-
-          <div className="mt-4 rounded-md border bg-muted/30 p-3">
-            <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              Detail specification
-            </p>
-            {selectedSpecifications.length ? (
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {selectedSpecifications.map((spec) => (
-                  <div
-                    key={spec.id}
-                    className="rounded-md border bg-background px-3 py-2"
-                  >
-                    <p className="text-xs text-muted-foreground">
-                      {spec.specName || "Specification"}
-                    </p>
-                    <p className="font-medium">{spec.specValue || "-"}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No detail specifications recorded for this PO line.
-              </p>
-            )}
-          </div>
-        </div>
+        <SelectedPoLineSummary selectedPoDetail={selectedPoDetail} />
       )}
 
-      {/* Photos */}
-      <div className="rounded-lg border p-4">
-        <h3 className="mb-4 font-semibold">Photos</h3>
-        {selectedPoDetail ? (
-          <div className="grid gap-4">
-            {photoGroups.map((group, groupIndex) => (
-              <div
-                key={`${selectedPoDetailId}-${groupIndex}`}
-                className="rounded-md border p-3"
-              >
-                <Field>
-                  <FieldLabel htmlFor={`photos-${groupIndex}`}>
-                    Asset {groupIndex + 1} Photos
-                  </FieldLabel>
-                  <Input
-                    id={`photos-${groupIndex}`}
-                    name={`photos-${groupIndex}`}
-                    type="file"
-                    multiple
-                    required
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={(e) => handleFileChange(groupIndex, e)}
-                  />
-                  <FieldDescription>
-                    Upload at least one photo for this asset. Max{" "}
-                    {MAX_PHOTO_FILE_SIZE_MB} MB per file.
-                  </FieldDescription>
-                  {group.oversizedFileNames.length > 0 && (
-                    <FieldError>
-                      Files over {MAX_PHOTO_FILE_SIZE_MB} MB:{" "}
-                      {group.oversizedFileNames.join(", ")}
-                    </FieldError>
-                  )}
-                </Field>
-
-                {group.files.length > 0 && (
-                  <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-                    {group.files.map((file, fileIndex) => (
-                      <div
-                        key={`${file.name}-${fileIndex}`}
-                        className="group relative"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={URL.createObjectURL(file)}
-                          alt={file.name}
-                          className="h-24 w-full rounded border object-cover"
-                        />
-                        <p className="mt-1 truncate text-xs text-muted-foreground">
-                          {file.name}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Select a PO line before uploading asset photos.
-          </p>
-        )}
-      </div>
+      <AssetItemFieldsSection
+        selectedPoDetailId={selectedPoDetailId}
+        photoGroups={photoGroups}
+        serialNumbers={serialNumbers}
+        maxPhotoFileSizeMb={MAX_PHOTO_FILE_SIZE_MB}
+        hasSelectedPoDetail={!!selectedPoDetail}
+        onSerialNumberChange={handleSerialNumberChange}
+        onFileChange={handleFileChange}
+      />
 
       <div className="flex justify-end gap-2">
         <Button

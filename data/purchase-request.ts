@@ -1,11 +1,7 @@
 import "server-only"
 
 import { db } from "@/drizzle/db"
-import {
-  assetCategories,
-  companies,
-  purchaseRequests,
-} from "@/drizzle/schema"
+import { assetCategories, companies, purchaseRequests } from "@/drizzle/schema"
 import { requirePermission } from "@/lib/auth/permission"
 import { isSuperAdmin } from "@/lib/auth/permission-query"
 import { paginatedResponse, paginationParams } from "@/lib/helper"
@@ -73,6 +69,24 @@ export async function purchaseRequestIndex(
             name: true,
           },
         },
+        details: {
+          columns: {
+            quantity: true,
+          },
+          with: {
+            purchaseOrderDetails: {
+              columns: {
+                quantity: true,
+              },
+            },
+          },
+        },
+        purchaseOrders: {
+          columns: {
+            poNo: true,
+          },
+          orderBy: (purchaseOrders, { asc }) => [asc(purchaseOrders.poNo)],
+        },
       },
       orderBy: (purchaseRequests, { desc }) => [
         desc(purchaseRequests.createdAt),
@@ -83,7 +97,27 @@ export async function purchaseRequestIndex(
     db.select({ count: count() }).from(purchaseRequests).where(where),
   ])
 
-  return paginatedResponse(data, total, pagination)
+  return paginatedResponse(
+    data.map(({ details, purchaseOrders, ...purchaseRequest }) => ({
+      ...purchaseRequest,
+      purchaseOrders,
+      remainingQuantity: Math.max(
+        0,
+        details.reduce((total, detail) => total + (detail.quantity ?? 0), 0) -
+          details.reduce(
+            (total, detail) =>
+              total +
+              detail.purchaseOrderDetails.reduce(
+                (quantity, poDetail) => quantity + (poDetail.quantity ?? 0),
+                0
+              ),
+            0
+          )
+      ),
+    })),
+    total,
+    pagination
+  )
 }
 
 export async function inboxPurchaseRequest(
@@ -92,7 +126,7 @@ export async function inboxPurchaseRequest(
   query?: string
 ) {
   await requireUser()
-  await requirePermission("purchase-request:read")
+  await requirePermission("purchase-request:browse")
 
   const pagination = paginationParams(currentPage, size)
   const search = query?.trim()
@@ -197,16 +231,14 @@ export async function purchaseRequestShow(id: string) {
     notFound()
   }
 
-  const superAdmin = await isSuperAdmin(user.id)
-  if (!superAdmin && data.createdBy !== user.id) {
-    notFound()
-  }
-
   return data
 }
 
 export type purchaseRequestIndexType = Awaited<
   ReturnType<typeof purchaseRequestIndex>
+>["data"][0]
+export type inboxPurchaseRequestIndexType = Awaited<
+  ReturnType<typeof inboxPurchaseRequest>
 >["data"][0]
 export type purchaseRequestShowType = Awaited<
   ReturnType<typeof purchaseRequestShow>

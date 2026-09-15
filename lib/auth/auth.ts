@@ -1,15 +1,15 @@
 import { db } from "@/drizzle/db"
 import * as schema from "@/drizzle/schema"
-import { betterAuth } from "better-auth"
+import { betterAuth, type BetterAuthOptions } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { nextCookies } from "better-auth/next-js"
-import { phoneNumber, username } from "better-auth/plugins"
+import { customSession, phoneNumber, username } from "better-auth/plugins"
 import { sendWa } from "../fonnte"
 import { createAuthMiddleware } from "better-auth/api"
 import { and, eq, ne } from "drizzle-orm"
 import { getUserPermissionNames } from "./permission-query"
 
-export const auth = betterAuth({
+const authOptions = {
   baseURL: process.env.BETTER_AUTH_URL,
   trustedOrigins: process.env.BETTER_AUTH_URL
     ? [process.env.BETTER_AUTH_URL]
@@ -26,21 +26,25 @@ export const auth = betterAuth({
         defaultValue: true,
         input: false,
       },
-    },
-  },
-  session: {
-    additionalFields: {
       companyId: {
         type: "string",
+        required: false,
+        input: false,
       },
       companyName: {
         type: "string",
+        required: false,
+        input: false,
       },
       branchId: {
         type: "string",
+        required: false,
+        input: false,
       },
       branchName: {
         type: "string",
+        required: false,
+        input: false,
       },
     },
   },
@@ -86,6 +90,32 @@ export const auth = betterAuth({
         await sendWa(phoneNumber, code)
       },
     }),
+  ],
+} satisfies BetterAuthOptions
+
+export const auth = betterAuth({
+  ...authOptions,
+  plugins: [
+    ...authOptions.plugins,
+    customSession(async ({ user, session }) => {
+      const userRoles = await db.query.roleUser.findFirst({
+        where: and(
+          eq(schema.roleUser.userId, user.id),
+          eq(schema.roleUser.isActive, true)
+        ),
+        with: {
+          role: true,
+        },
+      })
+
+      return {
+        user: {
+          ...user,
+          role: userRoles?.role.name || null,
+        },
+        session,
+      }
+    }, authOptions),
     nextCookies(),
   ],
 })

@@ -1,11 +1,5 @@
 import type { purchaseOrderShowType } from "@/data/purchase-order"
-import {
-  Document,
-  Page,
-  StyleSheet,
-  Text,
-  View,
-} from "@react-pdf/renderer"
+import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer"
 
 type PurchaseOrderDetail = purchaseOrderShowType["details"][number]
 
@@ -18,7 +12,7 @@ const styles = StyleSheet.create({
     padding: 32,
     fontSize: 10,
     fontFamily: "Helvetica",
-    color: "#111827",
+    color: "#09090b",
   },
   title: {
     fontSize: 18,
@@ -27,53 +21,75 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     marginBottom: 16,
-    color: "#4b5563",
+    color: "#71717a",
   },
   section: {
     marginBottom: 16,
   },
-  grid: {
+  orderInfo: {
     display: "flex",
     flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  infoItem: {
-    width: "48%",
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: "#e4e4e7",
     borderStyle: "solid",
-    padding: 8,
-    marginBottom: 8,
-    marginRight: 8,
+  },
+  orderColumn: {
+    width: "50%",
+    padding: 10,
+  },
+  supplierColumn: {
+    borderLeftWidth: 1,
+    borderLeftColor: "#e4e4e7",
+    borderLeftStyle: "solid",
+  },
+  sectionLabel: {
+    color: "#71717a",
+    fontSize: 8,
+    marginBottom: 7,
+  },
+  infoRow: {
+    display: "flex",
+    flexDirection: "row",
+    marginBottom: 5,
   },
   label: {
-    color: "#6b7280",
-    marginBottom: 3,
+    width: "34%",
+    color: "#71717a",
   },
   value: {
+    width: "66%",
     fontWeight: 700,
+  },
+  supplierName: {
+    fontSize: 11,
+    fontWeight: 700,
+    marginBottom: 2,
+  },
+  supplierDetail: {
+    color: "#27272a",
+    lineHeight: 1.3,
   },
   table: {
     borderTopWidth: 1,
     borderLeftWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: "#e4e4e7",
     borderStyle: "solid",
   },
   row: {
     display: "flex",
     flexDirection: "row",
     borderBottomWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: "#e4e4e7",
     borderStyle: "solid",
   },
   headerRow: {
-    backgroundColor: "#f3f4f6",
+    backgroundColor: "#f4f4f5",
     fontWeight: 700,
   },
   cell: {
     padding: 6,
     borderRightWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: "#e4e4e7",
     borderStyle: "solid",
   },
   assetCell: {
@@ -103,7 +119,7 @@ const styles = StyleSheet.create({
   },
   summaryTotal: {
     borderTopWidth: 1,
-    borderColor: "#111827",
+    borderColor: "#09090b",
     borderStyle: "solid",
     paddingTop: 6,
     fontWeight: 700,
@@ -116,6 +132,20 @@ function formatCurrency(value: number | null | undefined) {
 
 function formatText(value: string | null | undefined) {
   return value?.trim() ? value : "-"
+}
+
+function formatVillage(
+  village: purchaseOrderShowType["supplier"]["village"] | null | undefined
+) {
+  if (!village) return "-"
+  const parts = [
+    village.name,
+    village.district?.name,
+    village.regency?.name,
+    village.province?.name,
+  ].filter(Boolean)
+  const line = parts.length ? parts.join(", ") : "-"
+  return village.postalCode ? `${line} ${village.postalCode}` : line
 }
 
 function formatPurchaseRequest(data: purchaseOrderShowType) {
@@ -149,9 +179,9 @@ function calculateSubtotal(details: PurchaseOrderDetail[]) {
   return details.reduce((sum, detail) => sum + Number(detail.total ?? 0), 0)
 }
 
-function InfoItem({ label, value }: { label: string; value: string | number }) {
+function InfoRow({ label, value }: { label: string; value: string | number }) {
   return (
-    <View style={styles.infoItem}>
+    <View style={styles.infoRow}>
       <Text style={styles.label}>{label}</Text>
       <Text style={styles.value}>{value}</Text>
     </View>
@@ -173,11 +203,33 @@ export default function PurchaseOrderPdfDocument({
           <Text style={styles.subtitle}>{formatText(data.description)}</Text>
         </View>
 
-        <View style={[styles.section, styles.grid]}>
-          <InfoItem label="Date" value={data.date} />
-          <InfoItem label="Supplier" value={data.supplier?.name ?? "-"} />
-          <InfoItem label="Purchase Request" value={formatPurchaseRequest(data)} />
-          <InfoItem label="Status" value={data.status} />
+        <View style={[styles.section, styles.orderInfo]}>
+          <View style={styles.orderColumn}>
+            <Text style={styles.sectionLabel}>ORDER DETAILS</Text>
+            <InfoRow label="PO Number" value={data.poNo} />
+            <InfoRow label="Date" value={data.date} />
+            <InfoRow
+              label="Purchase Request"
+              value={formatPurchaseRequest(data)}
+            />
+            <InfoRow label="Status" value={data.status} />
+          </View>
+
+          <View style={[styles.orderColumn, styles.supplierColumn]}>
+            <Text style={styles.sectionLabel}>SUPPLIER DETAILS</Text>
+            <Text style={styles.supplierName}>
+              {formatText(data.supplier?.name)}
+            </Text>
+            <Text style={styles.supplierDetail}>
+              {formatText(data.supplier?.address)}
+            </Text>
+            <Text style={styles.supplierDetail}>
+              {formatVillage(data.supplier?.village)}
+            </Text>
+            <Text style={styles.supplierDetail}>
+              Nomor Rekening: {formatText(data.supplierAccount?.accountNo)}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -192,7 +244,7 @@ export default function PurchaseOrderPdfDocument({
 
             {data.details.length ? (
               data.details.map((detail) => (
-                <View key={detail.id} style={styles.row}>
+                <View key={detail.id} style={styles.row} wrap={false}>
                   <Text style={[styles.cell, styles.assetCell]}>
                     {formatAssetCode(detail)}
                   </Text>

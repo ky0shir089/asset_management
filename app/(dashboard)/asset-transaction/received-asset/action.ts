@@ -29,7 +29,12 @@ function normalizeSlug(value: string): string {
     .replace(/[^A-Z0-9\-]/g, "")
 }
 
-const ALLOWED_PHOTO_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"]
+const ALLOWED_PHOTO_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+]
 
 type CreatedReceiveAsset = {
   id: string
@@ -47,16 +52,10 @@ function collectPhotoGroups(
       .getAll(`photos-${index}`)
       .filter((entry): entry is File => entry instanceof File && entry.size > 0)
 
-    if (files.length < 1) {
-      throw new Error(
-        `Please upload at least one asset photo for asset ${index + 1}`
-      )
-    }
-
     for (const file of files) {
       if (!ALLOWED_PHOTO_MIME_TYPES.includes(file.type)) {
         throw new Error(
-          `Invalid file type "${file.type}". Allowed: image/jpeg, image/png, image/webp`
+          `Invalid file type "${file.type}". Allowed: image/jpeg, image/png, image/webp, application/pdf`
         )
       }
       if (file.size > MAX_PHOTO_FILE_SIZE_BYTES) {
@@ -202,6 +201,11 @@ export async function receivedAssetStore(formData: FormData) {
       }
     }
 
+    const serialNumbers = Array.from({ length: receivedQuantity }, (_, index) => {
+      const val = formData.get(`serialNumber-${index}`)
+      return typeof val === "string" && val.trim().length > 0 ? val.trim() : null
+    })
+
     // --- Snapshot category/code from assetCode ---
     const assetCode = pod.prDetail.assetCode
     const categoryName = assetCode.category?.name ?? "UNKNOWN"
@@ -248,40 +252,35 @@ export async function receivedAssetStore(formData: FormData) {
         const year = now.getFullYear()
         const month = now.getMonth() + 1
         const prefix = `${year}/${String(month).padStart(2, "0")}/${normalizeSlug(categoryName)}/${normalizeSlug(codeValue)}/`
+        const yearScope = `${year}/__/${normalizeSlug(categoryName)}/${normalizeSlug(codeValue)}/`
 
-        await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${prefix}))`)
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${yearScope}))`)
 
-        const lastMatch = await tx
-          .select({ nomorAssets: assetDatas.nomorAssets })
+        const [{ lastSequence }] = await tx
+          .select({
+            lastSequence: sql`coalesce(max(substring(${assetDatas.nomorAssets} from '/([0-9]+)$')::numeric), 0)`.mapWith(Number),
+          })
           .from(assetDatas)
-          .where(like(assetDatas.nomorAssets, `${prefix}%`))
-          .orderBy(
-            sql`length(${assetDatas.nomorAssets}) desc, ${assetDatas.nomorAssets} desc`
-          )
-          .limit(1)
-
-        const lastSeq =
-          lastMatch.length > 0
-            ? Number(lastMatch[0].nomorAssets.split("/").pop() ?? 0)
-            : 0
+          .where(like(assetDatas.nomorAssets, `${year}/%/${normalizeSlug(categoryName)}/${normalizeSlug(codeValue)}/%`))
 
         const assetsToCreate = Array.from(
           { length: receivedQuantity },
           (_, index) => ({
             id: crypto.randomUUID(),
-            nomorAssets: `${prefix}${String(lastSeq + index + 1).padStart(5, "0")}`,
+            nomorAssets: `${prefix}${String(lastSequence + index + 1).padStart(5, "0")}`,
           })
         )
 
         // 4. Insert receive assets (no photo/QR data yet)
         await tx.insert(assetDatas).values(
-          assetsToCreate.map((asset) => ({
+          assetsToCreate.map((asset, index) => ({
             id: asset.id,
             poDetailId,
             outletId,
             condition,
             status: "TERSEDIA",
             nomorAssets: asset.nomorAssets,
+            serialNumber: serialNumbers[index] ?? null,
             createdBy: user.id,
           }))
         )

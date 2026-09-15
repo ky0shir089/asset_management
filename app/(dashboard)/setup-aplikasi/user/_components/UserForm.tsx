@@ -38,6 +38,11 @@ export default function UserForm({ data, roles }: UserFormProps) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
+  const roleItems = roles.map((role) => ({
+    label: role.name,
+    value: role.id,
+  }))
+
   const form = useForm<userSchemaType>({
     resolver: zodResolver(userSchema),
     defaultValues: {
@@ -84,6 +89,7 @@ export default function UserForm({ data, roles }: UserFormProps) {
             <Field data-invalid={fieldState.invalid}>
               <FieldLabel htmlFor={field.name}>Role</FieldLabel>
               <Select
+                items={roleItems}
                 name={field.name}
                 value={field.value || null}
                 onValueChange={(value) => field.onChange(value ?? "")}

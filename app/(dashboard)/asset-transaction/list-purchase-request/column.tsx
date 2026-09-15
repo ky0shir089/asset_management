@@ -1,12 +1,12 @@
 "use client"
 
 import { buttonVariants } from "@/components/ui/button"
-import type { purchaseRequestIndexType } from "@/data/purchase-request"
+import type { inboxPurchaseRequestIndexType } from "@/data/purchase-request"
 import { ColumnDef } from "@tanstack/react-table"
 import { Eye } from "lucide-react"
 import Link from "next/link"
 
-export const columns: ColumnDef<purchaseRequestIndexType>[] = [
+export const columns: ColumnDef<inboxPurchaseRequestIndexType>[] = [
   {
     header: "PR No",
     accessorKey: "prNo",

@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-const STATUS_OPTIONS = ["TERSEDIA", "BOOKED", "DISEWA"] as const
+const STATUS_OPTIONS = ["TERSEDIA", "BOOKED", "DIGUNAKAN"] as const
 
 const FILTER_KEYS = [
   "nomorAsset",

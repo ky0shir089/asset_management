@@ -2,13 +2,28 @@
 
 import { requireUser } from "@/data/require-user"
 import { db } from "@/drizzle/db"
-import { supplierAccounts, suppliers } from "@/drizzle/schema"
+import { supplierAccounts, suppliers, villages } from "@/drizzle/schema"
 import { authorizeAction } from "@/lib/auth/permission"
 import {
   supplierSchema,
   supplierSchemaType,
 } from "@/lib/formSchemas/supplier-schema"
 import { and, eq } from "drizzle-orm"
+import { revalidatePath } from "next/cache"
+
+async function isValidLocation(values: supplierSchemaType) {
+  const village = await db.query.villages.findFirst({
+    where: and(
+      eq(villages.id, values.villageId),
+      eq(villages.provinceId, values.provinceId),
+      eq(villages.regencyId, values.regencyId),
+      eq(villages.districtId, values.districtId)
+    ),
+    columns: { id: true },
+  })
+
+  return Boolean(village)
+}
 
 export async function supplierStore(values: supplierSchemaType) {
   const user = await requireUser()
@@ -29,11 +44,20 @@ export async function supplierStore(values: supplierSchemaType) {
       }
     }
 
+    if (!(await isValidLocation(validation.data))) {
+      return {
+        success: false,
+        message: "Invalid location",
+      }
+    }
+
     await db.transaction(async (tx) => {
       const [supplier] = await tx
         .insert(suppliers)
         .values({
           name: validation.data.name,
+          address: validation.data.address,
+          villageId: validation.data.villageId,
           createdBy: user.id,
         })
         .returning()
@@ -48,6 +72,8 @@ export async function supplierStore(values: supplierSchemaType) {
         }))
       )
     })
+
+    revalidatePath("/asset/supplier")
 
     return {
       success: true,
@@ -80,11 +106,20 @@ export async function supplierUpdate(id: string, values: supplierSchemaType) {
       }
     }
 
+    if (!(await isValidLocation(validation.data))) {
+      return {
+        success: false,
+        message: "Invalid location",
+      }
+    }
+
     await db.transaction(async (tx) => {
       await tx
         .update(suppliers)
         .set({
           name: validation.data.name,
+          address: validation.data.address,
+          villageId: validation.data.villageId,
           updatedBy: user.id,
         })
         .where(eq(suppliers.id, id))
@@ -114,7 +149,9 @@ export async function supplierUpdate(id: string, values: supplierSchemaType) {
           return existingIds.has(account.id)
         }
       )
-      const newAccounts = validation.data.accounts.filter((account) => !account.id)
+      const newAccounts = validation.data.accounts.filter(
+        (account) => !account.id
+      )
 
       await Promise.all(
         existingSubmittedAccounts.map((account) =>
@@ -160,6 +197,8 @@ export async function supplierUpdate(id: string, values: supplierSchemaType) {
         )
       )
     })
+
+    revalidatePath("/asset/supplier")
 
     return {
       success: true,

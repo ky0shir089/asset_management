@@ -98,16 +98,18 @@ export default async function ReceivedAssetDetailPage({
       )}
 
       {/* Photos */}
-      {data.photos?.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Photos</CardTitle>
-          </CardHeader>
-          <CardContent>
+      <Card>
+        <CardHeader>
+          <CardTitle>Photos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {data.photos.length > 0 ? (
             <PhotoCarousel photos={data.photos} />
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <p className="text-sm">No photos uploaded.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

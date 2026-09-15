@@ -12,6 +12,20 @@ export const columns: ColumnDef<purchaseRequestIndexType>[] = [
     accessorKey: "prNo",
   },
   {
+    header: "PO No",
+    cell: ({ row }) => {
+      const poNumbers = row.original.purchaseOrders.map((item) => item.poNo)
+
+      return (
+        <ul>
+          {poNumbers.map((poNo) => (
+            <li key={poNo}>{poNo}</li>
+          ))}
+        </ul>
+      )
+    },
+  },
+  {
     header: "Date",
     accessorKey: "date",
   },
@@ -33,13 +47,21 @@ export const columns: ColumnDef<purchaseRequestIndexType>[] = [
     accessorKey: "totalQuantity",
   },
   {
+    header: "Remaining Qty",
+    accessorKey: "remainingQuantity",
+  },
+  {
     header: "Amount",
     accessorKey: "totalAmount",
     cell: ({ row }) => (row.original.totalAmount ?? 0).toLocaleString("id-ID"),
   },
   {
-    header: "Status",
+    header: "PR Status",
     accessorKey: "status",
+  },
+  {
+    header: "PO Status",
+    accessorKey: "poStatus",
   },
   {
     header: "Action",

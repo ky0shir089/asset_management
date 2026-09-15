@@ -22,6 +22,7 @@ import {
   purchaseOrderSchemaType,
 } from "@/lib/formSchemas/purchase-order-schema"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { MapPin } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useTransition, useEffect, useState, useCallback } from "react"
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form"
@@ -108,6 +109,20 @@ export default function PurchaseOrderForm({
     control: form.control,
     name: "supplierId",
   })
+
+  const selectedSupplier = suppliers.find((s) => s.id === selectedSupplierId)
+  const supplierAddressText = selectedSupplier
+    ? [
+        selectedSupplier.address,
+        selectedSupplier.village?.name,
+        selectedSupplier.village?.district?.name,
+        selectedSupplier.village?.regency?.name,
+        selectedSupplier.village?.province?.name,
+        selectedSupplier.village?.postalCode,
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : ""
 
   const shippingCost =
     useWatch({
@@ -322,6 +337,20 @@ export default function PurchaseOrderForm({
               )}
             />
           </div>
+
+          {selectedSupplierId && (
+            <div className="flex items-start gap-2.5 rounded-md border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground transition-all">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <div className="space-y-0.5">
+                <span className="font-medium text-foreground">
+                  Supplier Address
+                </span>
+                <p className="leading-relaxed">
+                  {supplierAddressText || "No address details recorded."}
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Controller

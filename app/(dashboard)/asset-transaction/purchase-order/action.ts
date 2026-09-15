@@ -17,7 +17,7 @@ import {
   purchaseOrderSchema,
   purchaseOrderSchemaType,
 } from "@/lib/formSchemas/purchase-order-schema"
-import { and, desc, eq, ilike, inArray, sql } from "drizzle-orm"
+import { and, eq, ilike, inArray, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 
 function getPurchaseOrderPeriod(date: string | Date) {
@@ -74,20 +74,55 @@ async function generatePurchaseOrderNumber(
 
   const { yearText, monthText } = getPurchaseOrderPeriod(input.date)
   const prefix = `PO/${pr.companyCode.trim()}/${yearText}/${monthText}/`
+  const yearScope = `PO/${pr.companyCode.trim()}/${yearText}/`
 
-  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${prefix}))`)
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${yearScope}))`)
 
-  const [last] = await tx
+  const [{ lastSequence }] = await tx
     .select({
-      poNo: purchaseOrders.poNo,
+      lastSequence: sql`coalesce(max(substring(${purchaseOrders.poNo} from '/([0-9]+)$')::numeric), 0)`.mapWith(Number),
     })
     .from(purchaseOrders)
-    .where(ilike(purchaseOrders.poNo, `${prefix}%`))
-    .orderBy(desc(purchaseOrders.createdAt))
+    .where(ilike(purchaseOrders.poNo, `${yearScope}%`))
 
-   const sequence = String((last?.poNo ? parseInt(last.poNo.split("/").pop() || "0") : 0) + 1).padStart(3, "0")
+   const sequence = String(lastSequence + 1).padStart(3, "0")
 
   return `${prefix}${sequence}`
+}
+
+async function syncPrPoStatus(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  prId: string
+) {
+  const prDtls = await tx
+    .select({ id: prDetails.id, quantity: prDetails.quantity })
+    .from(prDetails)
+    .where(eq(prDetails.prId, prId))
+
+  const totalPrQty = prDtls.reduce((sum, d) => sum + (d.quantity ?? 0), 0)
+  const prDtlIds = prDtls.map((d) => d.id)
+  let totalPoQty = 0
+
+  if (prDtlIds.length > 0) {
+    const poDtls = await tx
+      .select({ quantity: poDetails.quantity })
+      .from(poDetails)
+      .where(inArray(poDetails.prDtlId, prDtlIds))
+
+    totalPoQty = poDtls.reduce((sum, d) => sum + (d.quantity ?? 0), 0)
+  }
+
+  const poStatus =
+    totalPoQty >= totalPrQty
+      ? "CLOSED"
+      : totalPoQty > 0
+        ? "PROCESSED"
+        : "PENDING"
+
+  await tx
+    .update(purchaseRequests)
+    .set({ poStatus })
+    .where(eq(purchaseRequests.id, prId))
 }
 
 async function validatePurchaseOrderPayload(
@@ -282,7 +317,12 @@ export async function purchaseOrderStore(values: purchaseOrderSchemaType) {
           createdBy: user.id,
         })
       }
+
+      await syncPrPoStatus(tx, validation.data.prId)
     })
+
+    revalidatePath("/asset-transaction/purchase-order")
+    revalidatePath("/asset-transaction/purchase-request")
 
     return {
       success: true,
@@ -411,9 +451,12 @@ export async function purchaseOrderUpdate(
           createdBy: user.id,
         })
       }
+
+      await syncPrPoStatus(tx, existing.prId)
     })
 
     revalidatePath("/asset-transaction/purchase-order")
+    revalidatePath("/asset-transaction/purchase-request")
 
     return {
       success: true,

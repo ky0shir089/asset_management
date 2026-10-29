@@ -107,7 +107,8 @@ export default function AssetLeaseReturnAction({
     }
     if (validation.data.dateEnd < minimumReturnDate) {
       setErrors({
-        dateEnd: "Return date cannot be before lease start or latest transfer date",
+        dateEnd:
+          "Return date cannot be before lease start or latest transfer date",
       })
       focusFirstError()
       return

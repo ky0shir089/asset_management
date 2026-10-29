@@ -1,14 +1,15 @@
 import z from "zod"
+import { integerIdStringSchema } from "./id-schema"
 
 const prSpecificationInputSchema = z.object({
-  id: z.uuid().optional(),
-  specId: z.uuid(),
+  id: integerIdStringSchema.optional(),
+  specId: integerIdStringSchema,
   specValue: z.string(),
 })
 
 const prDetailInputSchema = z.object({
-  id: z.uuid().optional(),
-  assetCodeId: z.uuid(),
+  id: integerIdStringSchema.optional(),
+  assetCodeId: integerIdStringSchema,
   price: z.number().min(0),
   quantity: z.number().min(1),
   specifications: z.array(prSpecificationInputSchema),
@@ -16,8 +17,8 @@ const prDetailInputSchema = z.object({
 
 export const purchaseRequestSchema = z.object({
   date: z.string().min(1),
-  companyId: z.uuid(),
-  assetCategoryId: z.uuid(),
+  companyId: integerIdStringSchema,
+  assetCategoryId: integerIdStringSchema,
   description: z.string().optional(),
   details: z.array(prDetailInputSchema).min(1),
 })

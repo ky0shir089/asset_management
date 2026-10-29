@@ -17,8 +17,16 @@ import {
   purchaseOrderSchema,
   purchaseOrderSchemaType,
 } from "@/lib/formSchemas/purchase-order-schema"
-import { and, eq, ilike, inArray, sql } from "drizzle-orm"
+import { and, eq, ilike, inArray, isNull, ne, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
+import {
+  cleanupPurchaseOrderAttachment,
+  savePurchaseOrderAttachment,
+} from "@/lib/local-upload"
+import {
+  MAX_PO_ATTACHMENT_SIZE_BYTES,
+  MAX_PO_ATTACHMENT_SIZE_MB,
+} from "@/lib/upload-constants"
 
 function getPurchaseOrderPeriod(date: string | Date) {
   if (date instanceof Date) {
@@ -80,12 +88,15 @@ async function generatePurchaseOrderNumber(
 
   const [{ lastSequence }] = await tx
     .select({
-      lastSequence: sql`coalesce(max(substring(${purchaseOrders.poNo} from '/([0-9]+)$')::numeric), 0)`.mapWith(Number),
+      lastSequence:
+        sql`coalesce(max(substring(${purchaseOrders.poNo} from '/([0-9]+)$')::numeric), 0)`.mapWith(
+          Number
+        ),
     })
     .from(purchaseOrders)
     .where(ilike(purchaseOrders.poNo, `${yearScope}%`))
 
-   const sequence = String(lastSequence + 1).padStart(3, "0")
+  const sequence = String(lastSequence + 1).padStart(3, "0")
 
   return `${prefix}${sequence}`
 }
@@ -169,7 +180,8 @@ async function validatePurchaseOrderPayload(
     if (!account) {
       return {
         success: false,
-        message: "Supplier account not found or does not belong to selected supplier",
+        message:
+          "Supplier account not found or does not belong to selected supplier",
       }
     }
   }
@@ -280,8 +292,8 @@ export async function purchaseOrderStore(values: purchaseOrderSchemaType) {
           poNo,
           prId: validation.data.prId,
           supplierId: validation.data.supplierId,
-          supplierAccountId:
-            validation.data.supplierAccountId || null,
+          supplierAccountId: validation.data.supplierAccountId || null,
+          pvNo: validation.data.pvNo || null,
           description: validation.data.description,
           shippingCost: validation.data.shippingCost,
           createdBy: user.id,
@@ -339,9 +351,21 @@ export async function purchaseOrderStore(values: purchaseOrderSchemaType) {
 
 export async function purchaseOrderUpdate(
   id: string,
-  values: purchaseOrderSchemaType
+  values: purchaseOrderSchemaType,
+  formData: FormData
 ) {
   const user = await requireUser()
+  const attachmentEntry = formData.get("attachment")
+  if (attachmentEntry !== null && !(attachmentEntry instanceof File)) {
+    return { success: false, message: "Invalid attachment" }
+  }
+  if (attachmentEntry instanceof File && attachmentEntry.size === 0) {
+    return { success: false, message: "Attachment cannot be empty" }
+  }
+  const attachment =
+    attachmentEntry instanceof File && attachmentEntry.size > 0
+      ? attachmentEntry
+      : undefined
 
   try {
     const permission = await authorizeAction("purchase-order:update")
@@ -350,19 +374,16 @@ export async function purchaseOrderUpdate(
       return permission.response
     }
 
-    const validation = purchaseOrderSchema.safeParse(values)
-
-    if (!validation.success) {
-      return {
-        success: false,
-        message: "Invalid form data",
-      }
-    }
-
     // Verify PO status and owner
     const existing = await db.query.purchaseOrders.findFirst({
       where: eq(purchaseOrders.id, id),
-      columns: { id: true, prId: true, status: true, createdBy: true },
+      columns: {
+        id: true,
+        prId: true,
+        status: true,
+        createdBy: true,
+        attachment: true,
+      },
     })
 
     if (!existing) {
@@ -372,18 +393,102 @@ export async function purchaseOrderUpdate(
       }
     }
 
-    if (existing.status !== "NEW") {
-      return {
-        success: false,
-        message: "Only purchase orders with status 'NEW' can be updated.",
-      }
-    }
-
     const superAdmin = await isSuperAdmin(user.id)
     if (!superAdmin && existing.createdBy !== user.id) {
       return {
         success: false,
         message: "You do not own this purchase order",
+      }
+    }
+
+    if (attachment && attachment.size > 0) {
+      if (attachment.type !== "application/pdf") {
+        return { success: false, message: "Attachment must be a PDF" }
+      }
+      if (attachment.size > MAX_PO_ATTACHMENT_SIZE_BYTES) {
+        return {
+          success: false,
+          message: `Attachment exceeds ${MAX_PO_ATTACHMENT_SIZE_MB} MB limit`,
+        }
+      }
+    }
+
+    if (existing.status !== "NEW") {
+      const pvNoValidation = purchaseOrderSchema.shape.pvNo.safeParse(
+        (values as { pvNo?: unknown }).pvNo
+      )
+      if (!pvNoValidation.success) {
+        return { success: false, message: "Invalid PV No" }
+      }
+
+      if (attachment) {
+        const saved = await savePurchaseOrderAttachment(id, attachment)
+        let updated: boolean
+        try {
+          const [result] = await db
+            .update(purchaseOrders)
+            .set({
+              pvNo: pvNoValidation.data || null,
+              attachment: saved.path,
+              updatedBy: user.id,
+            })
+            .where(
+              and(
+                eq(purchaseOrders.id, id),
+                ne(purchaseOrders.status, "NEW"),
+                existing.attachment
+                  ? eq(purchaseOrders.attachment, existing.attachment)
+                  : isNull(purchaseOrders.attachment)
+              )
+            )
+            .returning({ id: purchaseOrders.id })
+          updated = Boolean(result)
+        } catch (error) {
+          await cleanupPurchaseOrderAttachment(id, saved.path)
+          throw error
+        }
+
+        if (!updated) {
+          await cleanupPurchaseOrderAttachment(id, saved.path)
+          return {
+            success: false,
+            message: "Purchase order status changed. Reload and try again.",
+          }
+        }
+        if (existing.attachment) {
+          await cleanupPurchaseOrderAttachment(id, existing.attachment)
+        }
+        revalidatePath(`/asset-transaction/purchase-order/${id}`)
+        return { success: true, message: "Purchase order attachment updated" }
+      }
+
+      const [updated] = await db
+        .update(purchaseOrders)
+        .set({ pvNo: pvNoValidation.data || null, updatedBy: user.id })
+        .where(and(eq(purchaseOrders.id, id), ne(purchaseOrders.status, "NEW")))
+        .returning({ id: purchaseOrders.id })
+
+      if (!updated) {
+        return {
+          success: false,
+          message: "Purchase order status changed. Reload and try again.",
+        }
+      }
+
+      revalidatePath("/asset-transaction/purchase-order")
+      revalidatePath(`/asset-transaction/purchase-order/${id}`)
+      return {
+        success: true,
+        message: "PV No updated successfully",
+      }
+    }
+
+    const validation = purchaseOrderSchema.safeParse(values)
+
+    if (!validation.success) {
+      return {
+        success: false,
+        message: "Invalid form data",
       }
     }
 
@@ -425,37 +530,87 @@ export async function purchaseOrderUpdate(
       }
     }
 
-    await db.transaction(async (tx) => {
-      await tx
-        .update(purchaseOrders)
-        .set({
-          date: validation.data.date,
-          supplierId: validation.data.supplierId,
-          supplierAccountId:
-            validation.data.supplierAccountId || null,
-          description: validation.data.description,
-          shippingCost: validation.data.shippingCost,
-          updatedBy: user.id,
-        })
-        .where(eq(purchaseOrders.id, id))
+    const savedAttachment =
+      attachment && attachment.size > 0
+        ? await savePurchaseOrderAttachment(id, attachment)
+        : undefined
 
-      await tx.delete(poDetails).where(eq(poDetails.poId, id))
+    let updated = false
+    try {
+      updated = await db.transaction(async (tx) => {
+        const details = validation.data.details
+        const totalQuantity = details.reduce((sum, d) => sum + d.quantity, 0)
+        const totalAmount = details.reduce(
+          (sum, d) => sum + d.quantity * d.price,
+          0
+        )
+        const [updatedPo] = await tx
+          .update(purchaseOrders)
+          .set({
+            date: validation.data.date,
+            supplierId: validation.data.supplierId,
+            supplierAccountId: validation.data.supplierAccountId || null,
+            pvNo: validation.data.pvNo || null,
+            description: validation.data.description,
+            shippingCost: validation.data.shippingCost,
+            totalQuantity,
+            totalAmount,
+            totalCost: totalAmount + (validation.data.shippingCost ?? 0),
+            ...(savedAttachment && { attachment: savedAttachment.path }),
+            updatedBy: user.id,
+          })
+          .where(
+            and(
+              eq(purchaseOrders.id, id),
+              eq(purchaseOrders.status, "NEW"),
+              existing.attachment
+                ? eq(purchaseOrders.attachment, existing.attachment)
+                : isNull(purchaseOrders.attachment)
+            )
+          )
+          .returning({ id: purchaseOrders.id })
 
-      for (const d of validation.data.details) {
-        await tx.insert(poDetails).values({
-          poId: id,
-          prDtlId: d.prDtlId,
-          quantity: d.quantity,
-          price: d.price,
-          total: d.quantity * d.price,
-          createdBy: user.id,
-        })
+        if (!updatedPo) return false
+
+        await tx.delete(poDetails).where(eq(poDetails.poId, id))
+
+        for (const d of details) {
+          await tx.insert(poDetails).values({
+            poId: id,
+            prDtlId: d.prDtlId,
+            quantity: d.quantity,
+            price: d.price,
+            total: d.quantity * d.price,
+            createdBy: user.id,
+          })
+        }
+
+        await syncPrPoStatus(tx, existing.prId)
+        return true
+      })
+    } catch (error) {
+      if (savedAttachment) {
+        await cleanupPurchaseOrderAttachment(id, savedAttachment.path)
       }
+      throw error
+    }
 
-      await syncPrPoStatus(tx, existing.prId)
-    })
+    if (!updated) {
+      if (savedAttachment) {
+        await cleanupPurchaseOrderAttachment(id, savedAttachment.path)
+      }
+      return {
+        success: false,
+        message: "Purchase order status changed. Reload and try again.",
+      }
+    }
+
+    if (savedAttachment && existing.attachment) {
+      await cleanupPurchaseOrderAttachment(id, existing.attachment)
+    }
 
     revalidatePath("/asset-transaction/purchase-order")
+    revalidatePath(`/asset-transaction/purchase-order/${id}`)
     revalidatePath("/asset-transaction/purchase-request")
 
     return {

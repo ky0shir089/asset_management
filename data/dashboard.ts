@@ -59,7 +59,7 @@ type DashboardFilters = {
   assetStatus?: string
 }
 
-const uuidSchema = z.uuid()
+const integerIdSchema = z.string().regex(/^[1-9]\d*$/)
 const statusSchema = z.string().trim().min(1).max(255)
 const statusLabels: Record<string, string> = {
   TERSEDIA: "Available",
@@ -71,7 +71,7 @@ function parseOptionId(
   value: string | undefined,
   options: ReadonlyMap<string, unknown>
 ) {
-  const result = uuidSchema.safeParse(value?.toLowerCase())
+  const result = integerIdSchema.safeParse(value)
   return result.success && options.has(result.data) ? result.data : undefined
 }
 

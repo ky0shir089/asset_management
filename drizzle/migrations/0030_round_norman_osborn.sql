@@ -1,0 +1,1 @@
+ALTER TABLE "asset_datas" ADD COLUMN "aktiva" varchar(255);

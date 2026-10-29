@@ -46,7 +46,10 @@ export async function assetBrandStore(values: assetBrandSchemaType) {
   }
 }
 
-export async function assetBrandUpdate(id: string, values: assetBrandSchemaType) {
+export async function assetBrandUpdate(
+  id: string,
+  values: assetBrandSchemaType
+) {
   const user = await requireUser()
 
   try {

@@ -1,6 +1,7 @@
 import { rentPhotoFilesSchema } from "@/lib/formSchemas/asset-lease-schema"
 import { standaloneAssetTransferSchema } from "./standalone-asset-transfer-schema"
 import z from "zod"
+import { integerIdStringSchema } from "./id-schema"
 
 export const ASSET_TRANSFER_CONDITIONS = [
   "BARU dan BAIK",
@@ -11,16 +12,16 @@ export const ASSET_TRANSFER_CONDITIONS = [
 
 export const assetTransferSchema = z
   .object({
-    rentId: z.uuid("Asset lease not found"),
-    rentDetailId: z.uuid("Leased asset not found"),
+    rentId: integerIdStringSchema,
+    rentDetailId: integerIdStringSchema,
     transferDate: z.iso.date("Transfer date is required"),
     condition: z.enum(ASSET_TRANSFER_CONDITIONS, {
       message: "Condition is required",
     }),
-    outletId: z.uuid("Outlet is required"),
+    outletId: integerIdStringSchema,
     userId: z.string().trim().min(1, "User is required"),
-    expectedOutletId: z.uuid("Current asset outlet is invalid"),
-    expectedTransferId: z.uuid("Current transfer is invalid").nullable(),
+    expectedOutletId: integerIdStringSchema,
+    expectedTransferId: integerIdStringSchema.nullable(),
   })
   .superRefine((value, ctx) => {
     if (value.outletId === value.expectedOutletId) {
@@ -35,7 +36,7 @@ export const assetTransferSchema = z
 export { standaloneAssetTransferSchema }
 
 export const assetTransferReceiptSchema = z.object({
-  transferId: z.uuid("Asset transfer not found"),
+  transferId: integerIdStringSchema,
   photos: rentPhotoFilesSchema,
 })
 

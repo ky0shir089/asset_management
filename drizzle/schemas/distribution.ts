@@ -1,4 +1,5 @@
 import { relations, sql } from "drizzle-orm"
+import { integerId, serialId } from "../id"
 import {
   date,
   index,
@@ -8,7 +9,6 @@ import {
   text,
   timestamp,
   uniqueIndex,
-  uuid,
   varchar,
 } from "drizzle-orm/pg-core"
 import { users } from "./auth-schema"
@@ -18,11 +18,11 @@ import { companies, outlets } from "./network"
 export const rentAssets = pgTable(
   "rent_assets",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: serialId("id").primaryKey(),
     rentNo: varchar("rent_no", { length: 255 }).notNull(),
     rentDate: date("rent_date").notNull(),
     receiveDate: date("receive_date"),
-    companyId: uuid("company_id")
+    companyId: integerId("company_id")
       .notNull()
       .references(() => companies.id, { onDelete: "cascade" }),
     note: varchar("note", { length: 255 }),
@@ -44,11 +44,11 @@ export const rentAssets = pgTable(
 )
 
 export const rentAssetDetails = pgTable("rent_asset_details", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  rentAssetId: uuid("rent_asset_id")
+  id: serialId("id").primaryKey(),
+  rentAssetId: integerId("rent_asset_id")
     .notNull()
     .references(() => rentAssets.id, { onDelete: "cascade" }),
-  assetId: uuid("asset_id")
+  assetId: integerId("asset_id")
     .notNull()
     .references(() => assetDatas.id, { onDelete: "cascade" }),
   dateStart: date("date_start"),
@@ -80,16 +80,16 @@ export const assetTransferStatusEnum = pgEnum("asset_transfer_status", [
 export const assetTransfers = pgTable(
   "asset_transfers",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
-    rentDtlId: uuid("rent_dtl_id").references(() => rentAssetDetails.id, {
+    id: serialId("id").primaryKey(),
+    rentDtlId: integerId("rent_dtl_id").references(() => rentAssetDetails.id, {
       onDelete: "cascade",
     }),
     transferDate: date("transfer_date").notNull(),
-    assetId: uuid("asset_id")
+    assetId: integerId("asset_id")
       .notNull()
       .references(() => assetDatas.id, { onDelete: "cascade" }),
     condition: conditionEnum(),
-    outletId: uuid("outlet_id")
+    outletId: integerId("outlet_id")
       .notNull()
       .references(() => outlets.id, { onDelete: "cascade" }),
     userId: text("user_id")
@@ -121,11 +121,11 @@ export const assetTransfers = pgTable(
 export const rentPhotoAssets = pgTable(
   "rent_photo_assets",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
-    rentDtlId: uuid("rent_dtl_id").references(() => rentAssetDetails.id, {
+    id: serialId("id").primaryKey(),
+    rentDtlId: integerId("rent_dtl_id").references(() => rentAssetDetails.id, {
       onDelete: "cascade",
     }),
-    transferId: uuid("transfer_id").references(() => assetTransfers.id, {
+    transferId: integerId("transfer_id").references(() => assetTransfers.id, {
       onDelete: "set null",
     }),
     name: varchar("name", { length: 255 }).notNull(),
@@ -144,8 +144,8 @@ export const rentPhotoAssets = pgTable(
 )
 
 export const maintenances = pgTable("maintenances", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  assetId: uuid("asset_id")
+  id: serialId("id").primaryKey(),
+  assetId: integerId("asset_id")
     .notNull()
     .references(() => assetDatas.id, { onDelete: "cascade" }),
   detail: text("detail").notNull(),

@@ -1,0 +1,3 @@
+-- No database changes. Migration 0032 creates the billing schema.
+-- Snapshot 0033 records the complete current schema after recovering from the incomplete 0032 snapshot.
+--> statement-breakpoint

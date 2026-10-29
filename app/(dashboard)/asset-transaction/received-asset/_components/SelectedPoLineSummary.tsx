@@ -38,7 +38,7 @@ export function SelectedPoLineSummary({
         </p>
       </div>
 
-      <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-6">
+      <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
         <SummaryItem label="PO number" value={selectedPoDetail.poNo} />
         <SummaryItem
           label="Company"
@@ -56,6 +56,10 @@ export function SelectedPoLineSummary({
         <SummaryItem
           label="Remaining"
           value={selectedPoDetail.remainingQuantity}
+        />
+        <SummaryItem
+          label="Total amount"
+          value={(selectedPoDetail.totalAmount ?? 0).toLocaleString("id-ID")}
         />
       </div>
 

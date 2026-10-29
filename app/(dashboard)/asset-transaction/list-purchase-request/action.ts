@@ -53,8 +53,7 @@ async function updatePurchaseRequestStatus(
       if (!validation.success) {
         return {
           success: false,
-          message:
-            validation.error.issues[0]?.message ?? "Reason is required",
+          message: validation.error.issues[0]?.message ?? "Reason is required",
         }
       }
 

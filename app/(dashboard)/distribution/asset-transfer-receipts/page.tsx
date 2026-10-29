@@ -20,7 +20,8 @@ export default async function AssetTransferReceiptsPage() {
           <h1 className="text-2xl font-bold">Transfer Receipts</h1>
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Confirm assets assigned to you after verifying destination and condition.
+          Confirm assets assigned to you after verifying destination and
+          condition.
         </p>
       </CardHeader>
       <CardContent>

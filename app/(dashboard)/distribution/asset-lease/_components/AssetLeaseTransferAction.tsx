@@ -64,7 +64,7 @@ export default function AssetLeaseTransferAction({
   const [isPending, startTransition] = useTransition()
   const [transferDate, setTransferDate] = useState(defaultTransferDate)
   const [condition, setCondition] = useState<
-    typeof ASSET_TRANSFER_CONDITIONS[number] | ""
+    (typeof ASSET_TRANSFER_CONDITIONS)[number] | ""
   >("")
   const [outletId, setOutletId] = useState("")
   const [userId, setUserId] = useState("")
@@ -106,7 +106,7 @@ export default function AssetLeaseTransferAction({
       rentId,
       rentDetailId,
       transferDate,
-      condition: condition as typeof ASSET_TRANSFER_CONDITIONS[number],
+      condition: condition as (typeof ASSET_TRANSFER_CONDITIONS)[number],
       outletId,
       userId,
       expectedOutletId: currentOutlet.id,
@@ -193,13 +193,16 @@ export default function AssetLeaseTransferAction({
                 Transfer Asset #{assetNumber}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Reassign asset location, condition, and user within lease company.
+                Reassign asset location, condition, and user within lease
+                company.
               </DialogDescription>
             </DialogHeader>
 
             {latestTransfer && (
               <div className="rounded-lg border bg-muted/40 p-3 text-xs">
-                <span className="font-medium text-foreground">Current Assignment:</span>{" "}
+                <span className="font-medium text-foreground">
+                  Current Assignment:
+                </span>{" "}
                 <span className="text-muted-foreground">
                   {latestTransfer.outletName} · {latestTransfer.userName} ·{" "}
                   {latestTransfer.transferDate}
@@ -247,7 +250,7 @@ export default function AssetLeaseTransferAction({
                     value={condition}
                     onValueChange={(value) => {
                       setCondition(
-                        value as typeof ASSET_TRANSFER_CONDITIONS[number]
+                        value as (typeof ASSET_TRANSFER_CONDITIONS)[number]
                       )
                       setErrors((current) => ({
                         ...current,

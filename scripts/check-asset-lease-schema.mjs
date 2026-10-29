@@ -27,10 +27,10 @@ const {
 const { assetTransferReceiptSchema, assetTransferSchema } =
   await import("@/lib/formSchemas/asset-transfer-schema")
 
-const id = "00000000-0000-4000-8000-000000000001"
-const detailId = "00000000-0000-4000-8000-000000000002"
-const outletId = "00000000-0000-4000-8000-000000000003"
-const currentOutletId = "00000000-0000-4000-8000-000000000004"
+const id = "1"
+const detailId = "2"
+const outletId = "3"
+const currentOutletId = "4"
 const photo = new File(["photo"], "asset.jpg", { type: "image/jpeg" })
 const pdf = new File(["pdf"], "asset.pdf", { type: "application/pdf" })
 const details = [{ rentDetailId: detailId, photos: [photo] }]

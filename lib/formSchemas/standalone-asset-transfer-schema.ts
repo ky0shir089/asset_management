@@ -1,4 +1,5 @@
 import z from "zod"
+import { integerIdStringSchema } from "./id-schema"
 
 function jakartaToday() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -10,13 +11,15 @@ function jakartaToday() {
 }
 
 export const standaloneAssetTransferSchema = z.object({
-  companyId: z.uuid("Company is required"),
-  assetId: z.uuid("Asset is required"),
-  transferDate: z
-    .iso
+  companyId: integerIdStringSchema,
+  assetId: integerIdStringSchema,
+  transferDate: z.iso
     .date("Transfer date is required")
-    .refine((date) => date <= jakartaToday(), "Transfer date cannot be in the future"),
+    .refine(
+      (date) => date <= jakartaToday(),
+      "Transfer date cannot be in the future"
+    ),
   userId: z.string().trim().min(1, "User is required"),
-  expectedOutletId: z.uuid("Current asset outlet is invalid"),
-  expectedTransferId: z.uuid("Current transfer is invalid").nullable(),
+  expectedOutletId: integerIdStringSchema,
+  expectedTransferId: integerIdStringSchema.nullable(),
 })

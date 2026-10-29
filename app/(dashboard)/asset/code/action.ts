@@ -2,15 +2,13 @@
 
 import { requireUser } from "@/data/require-user"
 import { db } from "@/drizzle/db"
-import { assetCodes, assetSpecs } from "@/drizzle/schema"
+import { assetCategories, assetCodes, assetSpecs } from "@/drizzle/schema"
 import { authorizeAction } from "@/lib/auth/permission"
 import {
   assetCodeSchema,
   assetCodeSchemaType,
 } from "@/lib/formSchemas/asset-code-schema"
 import { eq } from "drizzle-orm"
-
-const komputerCategoryId = "f8e6171b-5c36-4569-a28c-0d4f4dee50df"
 
 const komputerDefaultAssetSpecNames = [
   "Merk",
@@ -23,8 +21,8 @@ const komputerDefaultAssetSpecNames = [
 
 const defaultAssetSpecNames = ["Merk", "Tipe", "Keterangan"]
 
-function getDefaultAssetSpecNames(categoryId: string) {
-  return categoryId === komputerCategoryId
+function getDefaultAssetSpecNames(categoryName: string) {
+  return categoryName === "Komputer"
     ? komputerDefaultAssetSpecNames
     : defaultAssetSpecNames
 }
@@ -58,6 +56,12 @@ export async function assetCodeStore(values: assetCodeSchemaType) {
     }
 
     await db.transaction(async (tx) => {
+      const category = await tx.query.assetCategories.findFirst({
+        columns: { name: true },
+        where: eq(assetCategories.id, validation.data.categoryId),
+      })
+      if (!category) throw new Error("Asset category not found")
+
       const [createdAssetCode] = await tx
         .insert(assetCodes)
         .values({
@@ -67,7 +71,7 @@ export async function assetCodeStore(values: assetCodeSchemaType) {
         .returning({ id: assetCodes.id })
 
       await tx.insert(assetSpecs).values(
-        getDefaultAssetSpecNames(validation.data.categoryId).map((name) => ({
+        getDefaultAssetSpecNames(category.name).map((name) => ({
           codeId: createdAssetCode.id,
           name,
           isRequired: true,
@@ -84,7 +88,8 @@ export async function assetCodeStore(values: assetCodeSchemaType) {
     if (isUniqueViolation(error)) {
       return {
         success: false,
-        message: "Default asset specifications already exist for this asset code",
+        message:
+          "Default asset specifications already exist for this asset code",
       }
     }
 

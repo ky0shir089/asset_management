@@ -16,6 +16,10 @@ export const columns: ColumnDef<purchaseOrderIndexType>[] = [
     accessorKey: "poNo",
   },
   {
+    header: "PV No",
+    accessorKey: "pvNo",
+  },
+  {
     header: "PR No",
     accessorFn: (row) => row.purchaseRequest.prNo,
   },
@@ -30,22 +34,36 @@ export const columns: ColumnDef<purchaseOrderIndexType>[] = [
   {
     header: "Total Quantity",
     accessorKey: "totalQuantity",
-    cell: ({ row }) => <div className="text-center">{row.original.totalQuantity}</div>,
+    cell: ({ row }) => (
+      <div className="text-center">{row.original.totalQuantity}</div>
+    ),
   },
   {
     header: "Total Amount",
     accessorKey: "totalAmount",
-    cell: ({ row }) => <div className="text-right">{(row.original.totalAmount ?? 0).toLocaleString("id-ID")}</div>,
+    cell: ({ row }) => (
+      <div className="text-right">
+        {(row.original.totalAmount ?? 0).toLocaleString("id-ID")}
+      </div>
+    ),
   },
   {
     header: "Shipping",
     accessorKey: "shippingCost",
-    cell: ({ row }) => <div className="text-right">{(row.original.shippingCost ?? 0).toLocaleString("id-ID")}</div>,
+    cell: ({ row }) => (
+      <div className="text-right">
+        {(row.original.shippingCost ?? 0).toLocaleString("id-ID")}
+      </div>
+    ),
   },
   {
     header: "Total Cost",
     accessorKey: "totalCost",
-    cell: ({ row }) => <div className="text-right">{(row.original.totalCost ?? 0).toLocaleString("id-ID")}</div>,
+    cell: ({ row }) => (
+      <div className="text-right">
+        {(row.original.totalCost ?? 0).toLocaleString("id-ID")}
+      </div>
+    ),
   },
   {
     header: "Status",

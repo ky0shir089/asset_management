@@ -127,7 +127,6 @@ function AssetCodeCommandSelect({
     }
   }, [open, trimmedSearch])
 
-
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
@@ -141,7 +140,9 @@ function AssetCodeCommandSelect({
           />
         }
       >
-        <span className={cn("truncate", !selectedCode && "text-muted-foreground")}>
+        <span
+          className={cn("truncate", !selectedCode && "text-muted-foreground")}
+        >
           {selectedCode ? selectedCode.name : "Asset Code"}
         </span>
         <ChevronsUpDown className="size-4 text-muted-foreground" />

@@ -56,7 +56,7 @@ export function PhotoCarousel({
         className={cn(
           layout === "grid"
             ? "grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
-            : "flex flex-wrap gap-2 min-w-36"
+            : "flex min-w-36 flex-wrap gap-2"
         )}
       >
         {photos.map((photo, i) => (
@@ -82,7 +82,7 @@ export function PhotoCarousel({
           >
             {layout === "grid" ? (
               <>
-                <div className="relative h-40 w-full overflow-hidden rounded-lg border transition-all group-hover:ring-2 group-hover:ring-primary group-hover:shadow-md">
+                <div className="relative h-40 w-full overflow-hidden rounded-lg border transition-all group-hover:shadow-md group-hover:ring-2 group-hover:ring-primary">
                   {isPdfPath(photo.path, photo.name) ? (
                     <div className="flex size-full flex-col items-center justify-center bg-muted/40 p-4 text-center">
                       <FileText className="size-12 text-muted-foreground" />
@@ -115,7 +115,7 @@ export function PhotoCarousel({
                 width={56}
                 height={56}
                 sizes="56px"
-                className="object-cover border rounded-md size-14"
+                className="size-14 rounded-md border object-cover"
               />
             )}
           </DialogTrigger>
@@ -154,7 +154,7 @@ export function PhotoCarousel({
                 ? `${label}, photo ${safe + 1} of ${photos.length}`
                 : current.name
             }
-            className="h-[60vh] w-full min-w-[300px] sm:min-w-[600px] rounded-md border"
+            className="h-[60vh] w-full min-w-[300px] rounded-md border sm:min-w-[600px]"
           />
         ) : (
           <Image
@@ -186,7 +186,7 @@ export function PhotoCarousel({
             </Button>
           )}
           <span
-            className="text-sm text-center min-w-16 text-muted-foreground tabular-nums"
+            className="min-w-16 text-center text-sm text-muted-foreground tabular-nums"
             aria-live="polite"
             aria-atomic="true"
           >

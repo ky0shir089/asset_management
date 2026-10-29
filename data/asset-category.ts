@@ -51,4 +51,6 @@ export async function assetCategoryShow(id: string) {
 export type assetCategoryIndexType = Awaited<
   ReturnType<typeof assetCategoryIndex>
 >["data"][0]
-export type assetCategoryShowType = Awaited<ReturnType<typeof assetCategoryShow>>
+export type assetCategoryShowType = Awaited<
+  ReturnType<typeof assetCategoryShow>
+>

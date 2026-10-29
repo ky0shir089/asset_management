@@ -1,9 +1,10 @@
 import z from "zod"
+import { integerIdStringSchema } from "./id-schema"
 
 export const receivedAssetSchema = z.object({
-  poId: z.string().uuid(),
-  poDetailId: z.string().uuid(),
-  outletId: z.string().uuid(),
+  poId: integerIdStringSchema,
+  poDetailId: integerIdStringSchema,
+  outletId: integerIdStringSchema,
   condition: z.enum([
     "BARU dan BAIK",
     "BARU dan RUSAK",

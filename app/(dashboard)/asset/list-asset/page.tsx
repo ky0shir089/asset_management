@@ -69,7 +69,10 @@ export default async function ListAssetsPage({
 
       <AssetListFilters />
 
-      <Suspense key={suspenseKey} fallback={<DataTableSkeleton columns={showSensitiveFields ? 8 : 6} />}>
+      <Suspense
+        key={suspenseKey}
+        fallback={<DataTableSkeleton columns={showSensitiveFields ? 8 : 6} />}
+      >
         <RenderTable
           currentPage={currentPage}
           size={size}

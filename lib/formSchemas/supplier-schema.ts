@@ -1,8 +1,9 @@
 import z from "zod"
+import { integerIdStringSchema } from "./id-schema"
 
 export const supplierAccountInputSchema = z.object({
-  id: z.uuid().optional(),
-  bankId: z.uuid(),
+  id: integerIdStringSchema.optional(),
+  bankId: integerIdStringSchema,
   accountNo: z.string().min(1),
   accountName: z.string().min(1),
 })
@@ -13,10 +14,7 @@ export const supplierSchema = z.object({
   provinceId: z.string().min(1, "Province is required"),
   regencyId: z.string().min(1, "Regency is required"),
   districtId: z.string().min(1, "District is required"),
-  villageId: z
-    .number()
-    .int()
-    .positive("Village is required"),
+  villageId: z.number().int().positive("Village is required"),
   accounts: z.array(supplierAccountInputSchema).min(1),
 })
 export type supplierSchemaType = z.infer<typeof supplierSchema>

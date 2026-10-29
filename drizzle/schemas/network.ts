@@ -1,17 +1,17 @@
+import { serialId } from "../id"
 import {
   boolean,
   integer,
   pgTable,
   text,
   timestamp,
-  uuid,
   varchar,
 } from "drizzle-orm/pg-core"
 import { users } from "./auth-schema"
 import { relations } from "drizzle-orm"
 
 export const companies = pgTable("companies", {
-  id: uuid("id").defaultRandom().primaryKey(),
+  id: serialId("id").primaryKey(),
   talentaCompanyId: integer("talenta_company_id").default(0).unique(),
   name: varchar("name", { length: 255 }).notNull(),
   code: varchar("code", { length: 255 }).notNull(),
@@ -27,7 +27,7 @@ export const companies = pgTable("companies", {
 })
 
 export const branches = pgTable("branches", {
-  id: uuid("id").defaultRandom().primaryKey(),
+  id: serialId("id").primaryKey(),
   companyId: integer("company_id")
     .notNull()
     .references(() => companies.talentaCompanyId, { onDelete: "cascade" }),
@@ -45,7 +45,7 @@ export const branches = pgTable("branches", {
 })
 
 export const outlets = pgTable("outlets", {
-  id: uuid("id").defaultRandom().primaryKey(),
+  id: serialId("id").primaryKey(),
   branchId: varchar("branchId")
     .notNull()
     .references(() => branches.branchId, { onDelete: "cascade" }),

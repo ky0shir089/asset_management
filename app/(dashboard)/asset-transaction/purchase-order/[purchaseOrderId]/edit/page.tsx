@@ -8,30 +8,25 @@ import {
   purchaseRequestDetailOptions,
   supplierAccountOptions,
 } from "@/data/select"
-import { redirect } from "next/navigation"
 import { Suspense } from "react"
 import PurchaseOrderForm from "../../_components/PurchaseOrderForm"
 
 type Params = Promise<{ purchaseOrderId: string }>
 
-const RenderForm = async ({
-  purchaseOrderId,
-}: {
-  purchaseOrderId: string
-}) => {
+const RenderForm = async ({ purchaseOrderId }: { purchaseOrderId: string }) => {
   const data = await purchaseOrderShow(purchaseOrderId)
 
-  if (data.status !== "NEW") {
-    redirect("/asset-transaction/purchase-order")
-  }
-
-  const [suppliers, purchaseRequests, purchaseRequestDetails, supplierAccounts] =
-    await Promise.all([
-      supplierOptions(),
-      purchaseRequestOptions(data.prId),
-      purchaseRequestDetailOptions(purchaseOrderId),
-      supplierAccountOptions(data.supplierId),
-    ])
+  const [
+    suppliers,
+    purchaseRequests,
+    purchaseRequestDetails,
+    supplierAccounts,
+  ] = await Promise.all([
+    supplierOptions(),
+    purchaseRequestOptions(data.prId),
+    purchaseRequestDetailOptions(purchaseOrderId),
+    supplierAccountOptions(data.supplierId),
+  ])
 
   return (
     <PurchaseOrderForm

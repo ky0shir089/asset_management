@@ -8,25 +8,14 @@ import {
   maintenanceSchema,
   type maintenanceSchemaType,
 } from "@/lib/formSchemas/maintenance-schema"
+import { sanitizeRichText } from "@/lib/sanitize-html"
 import { revalidatePath } from "next/cache"
-import DOMPurify from "dompurify"
-
-function sanitizeHtml(html: string): string {
-  if (typeof window !== "undefined") {
-    return DOMPurify.sanitize(html)
-  }
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/on\w+="[^"]*"/gi, "")
-    .replace(/on\w+='[^']*'/gi, "")
-    .replace(/javascript:[^"']*/gi, "")
-}
 
 export async function createMaintenanceAction(values: maintenanceSchemaType) {
   const user = await requireUser()
 
   try {
-    const permission = await authorizeAction("received-asset:browse")
+    const permission = await authorizeAction("maintenance:browse")
     if (!permission.authorized) return permission.response
 
     const validation = maintenanceSchema.safeParse(values)
@@ -34,7 +23,7 @@ export async function createMaintenanceAction(values: maintenanceSchemaType) {
       return { success: false, message: "Data form tidak valid" }
     }
 
-    const cleanDetail = sanitizeHtml(validation.data.detail)
+    const cleanDetail = sanitizeRichText(validation.data.detail)
 
     const [inserted] = await db
       .insert(maintenances)

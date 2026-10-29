@@ -145,7 +145,10 @@ export async function receivedAssetStore(formData: FormData) {
     }
 
     if (!pod.prDetail?.assetCode) {
-      return { success: false, message: "Asset code not found for this PO detail" }
+      return {
+        success: false,
+        message: "Asset code not found for this PO detail",
+      }
     }
 
     // --- Verify outlet company match ---
@@ -201,9 +204,21 @@ export async function receivedAssetStore(formData: FormData) {
       }
     }
 
-    const serialNumbers = Array.from({ length: receivedQuantity }, (_, index) => {
-      const val = formData.get(`serialNumber-${index}`)
-      return typeof val === "string" && val.trim().length > 0 ? val.trim() : null
+    const serialNumbers = Array.from(
+      { length: receivedQuantity },
+      (_, index) => {
+        const val = formData.get(`serialNumber-${index}`)
+        return typeof val === "string" && val.trim().length > 0
+          ? val.trim()
+          : null
+      }
+    )
+
+    const aktivas = Array.from({ length: receivedQuantity }, (_, index) => {
+      const val = formData.get(`aktiva-${index}`)
+      return typeof val === "string" && val.trim().length > 0
+        ? val.trim()
+        : null
     })
 
     // --- Snapshot category/code from assetCode ---
@@ -217,7 +232,18 @@ export async function receivedAssetStore(formData: FormData) {
 
     try {
       await db.transaction(async (tx) => {
-        // 1. Lock PO detail
+        // 1. Lock PO and require its PV number before receiving
+        const [lockedPo] = await tx
+          .select({ pvNo: purchaseOrders.pvNo })
+          .from(purchaseOrders)
+          .where(eq(purchaseOrders.id, poId))
+          .for("update")
+
+        if (!lockedPo?.pvNo?.trim()) {
+          throw new Error("Update the PV No before receiving assets")
+        }
+
+        // 2. Lock PO detail
         const [lockedPod] = await tx
           .select({ id: poDetails.id, quantity: poDetails.quantity })
           .from(poDetails)
@@ -254,38 +280,59 @@ export async function receivedAssetStore(formData: FormData) {
         const prefix = `${year}/${String(month).padStart(2, "0")}/${normalizeSlug(categoryName)}/${normalizeSlug(codeValue)}/`
         const yearScope = `${year}/__/${normalizeSlug(categoryName)}/${normalizeSlug(codeValue)}/`
 
-        await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${yearScope}))`)
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(hashtext(${yearScope}))`
+        )
 
         const [{ lastSequence }] = await tx
           .select({
-            lastSequence: sql`coalesce(max(substring(${assetDatas.nomorAssets} from '/([0-9]+)$')::numeric), 0)`.mapWith(Number),
+            lastSequence:
+              sql`coalesce(max(substring(${assetDatas.nomorAssets} from '/([0-9]+)$')::numeric), 0)`.mapWith(
+                Number
+              ),
           })
           .from(assetDatas)
-          .where(like(assetDatas.nomorAssets, `${year}/%/${normalizeSlug(categoryName)}/${normalizeSlug(codeValue)}/%`))
+          .where(
+            like(
+              assetDatas.nomorAssets,
+              `${year}/%/${normalizeSlug(categoryName)}/${normalizeSlug(codeValue)}/%`
+            )
+          )
 
         const assetsToCreate = Array.from(
           { length: receivedQuantity },
           (_, index) => ({
-            id: crypto.randomUUID(),
             nomorAssets: `${prefix}${String(lastSequence + index + 1).padStart(5, "0")}`,
+            serialNumber: serialNumbers[index] ?? null,
+            aktiva: aktivas[index] ?? null,
           })
         )
 
         // 4. Insert receive assets (no photo/QR data yet)
-        await tx.insert(assetDatas).values(
-          assetsToCreate.map((asset, index) => ({
-            id: asset.id,
-            poDetailId,
-            outletId,
-            condition,
-            status: "TERSEDIA",
-            nomorAssets: asset.nomorAssets,
-            serialNumber: serialNumbers[index] ?? null,
-            createdBy: user.id,
-          }))
+        const insertedAssets = await tx
+          .insert(assetDatas)
+          .values(
+            assetsToCreate.map((asset) => ({
+              ...asset,
+              poDetailId,
+              outletId,
+              condition,
+              status: "TERSEDIA",
+              createdBy: user.id,
+            }))
+          )
+          .returning({ id: assetDatas.id, nomorAssets: assetDatas.nomorAssets })
+        const insertedByNumber = new Map(
+          insertedAssets.map((asset) => [asset.nomorAssets, asset])
         )
 
-        createdAssets.push(...assetsToCreate)
+        createdAssets.push(
+          ...assetsToCreate.map((asset) => {
+            const inserted = insertedByNumber.get(asset.nomorAssets)
+            if (!inserted) throw new Error("Failed to create received asset")
+            return inserted
+          })
+        )
 
         // 5. Update PO status if fully received
         const [{ totalOrdered }] = await tx
@@ -310,7 +357,10 @@ export async function receivedAssetStore(formData: FormData) {
       // --- Post-transaction: save photos & QR per created asset ---
       for (const [index, asset] of createdAssets.entries()) {
         try {
-          const savedPhotos = await savePhotos(asset.id, photoGroups[index] ?? [])
+          const savedPhotos = await savePhotos(
+            asset.id,
+            photoGroups[index] ?? []
+          )
           if (savedPhotos.length > 0) {
             await db.insert(photoAssets).values(
               savedPhotos.map((p) => ({
@@ -340,7 +390,9 @@ export async function receivedAssetStore(formData: FormData) {
       }
     } catch (err) {
       await Promise.all(
-        createdAssets.map((asset) => cleanupReceiveFiles(asset.id).catch(() => {}))
+        createdAssets.map((asset) =>
+          cleanupReceiveFiles(asset.id).catch(() => {})
+        )
       )
       return {
         success: false,

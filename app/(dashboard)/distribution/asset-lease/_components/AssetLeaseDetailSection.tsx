@@ -311,8 +311,8 @@ export default function AssetLeaseDetailSection({
               Before lease photos
             </FieldLabel>
             <FieldDescription id={`photos-${index}-description`}>
-              Required. Capture asset condition before this lease. Upload 1-10 JPEG,
-              PNG, or WebP files, maximum 1 MB each.
+              Required. Capture asset condition before this lease. Upload 1-10
+              JPEG, PNG, or WebP files, maximum 1 MB each.
             </FieldDescription>
             <AssetLeasePhotoInput
               id={`photos-${index}`}

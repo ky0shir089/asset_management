@@ -65,5 +65,7 @@ export async function assetSpecShow(id: string) {
   return data
 }
 
-export type assetSpecIndexType = Awaited<ReturnType<typeof assetSpecIndex>>["data"][0]
+export type assetSpecIndexType = Awaited<
+  ReturnType<typeof assetSpecIndex>
+>["data"][0]
 export type assetSpecShowType = Awaited<ReturnType<typeof assetSpecShow>>

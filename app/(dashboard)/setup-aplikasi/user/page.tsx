@@ -19,7 +19,7 @@ const RenderTable = async ({
   const result = await userIndex(currentPage, size, query)
 
   const { data, meta } = result
-  
+
   return <DataTable columns={columns} data={data} meta={meta} />
 }
 

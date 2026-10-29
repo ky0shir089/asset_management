@@ -1,9 +1,10 @@
 import z from "zod"
+import { integerIdStringSchema } from "./id-schema"
 
 const assetSpecTypeSchema = z.enum(["TEXT", "SELECT"])
 
 export const assetSpecSchema = z.object({
-  codeId: z.uuid(),
+  codeId: integerIdStringSchema,
   name: z.string().min(1),
   type: assetSpecTypeSchema,
   dataTable: z.string().optional(),

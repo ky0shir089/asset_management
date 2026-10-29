@@ -41,7 +41,7 @@ export default async function OutletPage({
 
   return (
     <>
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <h2 className="mb-4 text-3xl font-bold">Outlet</h2>
 
         <Link href="/network/outlet/new" className={buttonVariants()}>

@@ -11,6 +11,10 @@ import { Input } from "@/components/ui/input"
 import { LoadingSwap } from "@/components/ui/loading-swap"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import type { purchaseOrderShowType } from "@/data/purchase-order"
+import {
+  MAX_PO_ATTACHMENT_SIZE_BYTES,
+  MAX_PO_ATTACHMENT_SIZE_MB,
+} from "@/lib/upload-constants"
 import type {
   purchaseRequestDetailOptionType,
   purchaseRequestOptionType,
@@ -22,7 +26,7 @@ import {
   purchaseOrderSchemaType,
 } from "@/lib/formSchemas/purchase-order-schema"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { MapPin } from "lucide-react"
+import { FileText, MapPin, Upload, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useTransition, useEffect, useState, useCallback } from "react"
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form"
@@ -56,6 +60,8 @@ export default function PurchaseOrderForm({
     initialSupplierAccounts
   )
   const [loadingAccounts, setLoadingAccounts] = useState(false)
+  const [attachment, setAttachment] = useState<File | null>(null)
+  const [attachmentError, setAttachmentError] = useState("")
 
   const supplierItems = suppliers.map((s) => ({
     label: s.name,
@@ -84,6 +90,7 @@ export default function PurchaseOrderForm({
       prId: data?.prId ?? "",
       supplierId: data?.supplierId ?? "",
       supplierAccountId: data?.supplierAccountId ?? "",
+      pvNo: data?.pvNo ?? "",
       description: data?.description ?? "",
       shippingCost: data?.shippingCost ?? 0,
       details: initialDetails,
@@ -144,9 +151,7 @@ export default function PurchaseOrderForm({
     }
     setLoadingAccounts(true)
     try {
-      const res = await fetch(
-        `/api/supplier-accounts?supplierId=${supplierId}`
-      )
+      const res = await fetch(`/api/supplier-accounts?supplierId=${supplierId}`)
       if (res.ok) {
         const accounts = await res.json()
         setSupplierAccounts(accounts)
@@ -201,15 +206,20 @@ export default function PurchaseOrderForm({
 
   function onSubmit(values: purchaseOrderSchemaType) {
     startTransition(async () => {
+      const formData = new FormData()
+      if (attachment) formData.set("attachment", attachment)
       const result = data?.id
-        ? await purchaseOrderUpdate(data.id, values)
+        ? await purchaseOrderUpdate(data.id, values, formData)
         : await purchaseOrderStore(values)
 
       if (result.success) {
         form.reset()
+        setAttachment(null)
+        setAttachmentError("")
         toast.success(result.message)
         router.push("/asset-transaction/purchase-order")
       } else {
+        if (attachment) setAttachmentError(result.message ?? "Upload failed.")
         toast.error(result.message)
       }
     })
@@ -266,6 +276,26 @@ export default function PurchaseOrderForm({
                     disabled={!purchaseRequests.length || Boolean(data?.id)}
                     required
                     aria-invalid={fieldState.invalid}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+
+            <Controller
+              name="pvNo"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name}>PV No</FieldLabel>
+                  <Input
+                    {...field}
+                    id={field.name}
+                    aria-invalid={fieldState.invalid}
+                    placeholder="PV No"
+                    autoComplete="off"
                   />
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
@@ -399,6 +429,116 @@ export default function PurchaseOrderForm({
           </div>
         </FieldGroup>
       </div>
+
+      {data?.id && (
+        <div className="space-y-3 rounded-lg border p-4">
+          <div>
+            <h3 className="font-semibold">Purchase Order Attachment</h3>
+            <p
+              id="attachment-help"
+              className={
+                attachmentError
+                  ? "text-sm text-destructive"
+                  : "text-sm text-muted-foreground"
+              }
+              aria-live="polite"
+              role={attachmentError ? "alert" : undefined}
+            >
+              {attachmentError ||
+                `Upload one PDF document, up to ${MAX_PO_ATTACHMENT_SIZE_MB} MB.`}
+            </p>
+          </div>
+
+          {attachment ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-muted/40 p-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <FileText
+                  className="size-5 shrink-0 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <span className="truncate text-sm font-medium">
+                  {attachment.name}
+                </span>
+                <span className="shrink-0 text-sm text-muted-foreground">
+                  {(attachment.size / (1024 * 1024)).toFixed(2)} MB
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-lg"
+                className="size-11"
+                aria-label="Remove selected attachment"
+                onClick={() => {
+                  setAttachment(null)
+                  setAttachmentError("")
+                }}
+              >
+                <X className="size-4" aria-hidden="true" />
+              </Button>
+            </div>
+          ) : data.attachment ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-muted/40 p-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <FileText
+                  className="size-5 shrink-0 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <span className="text-sm text-muted-foreground">
+                  Current document
+                </span>
+              </div>
+              <a
+                href={`/asset-transaction/purchase-order/${data.id}/attachment`}
+                className="text-sm font-medium underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              >
+                Download PDF
+              </a>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No document attached.
+            </p>
+          )}
+
+          <label
+            htmlFor="purchase-order-attachment"
+            className="flex min-h-11 w-fit cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors focus-within:ring-2 focus-within:ring-ring hover:bg-muted"
+          >
+            <Upload className="size-4" aria-hidden="true" />
+            {attachment || data.attachment ? "Replace document" : "Choose PDF"}
+            <Input
+              id="purchase-order-attachment"
+              type="file"
+              accept="application/pdf,.pdf"
+              className="sr-only"
+              aria-describedby="attachment-help"
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0]
+                if (!file) return
+                if (
+                  file.type !== "application/pdf" ||
+                  !file.name.toLowerCase().endsWith(".pdf")
+                ) {
+                  setAttachmentError("Choose a PDF document.")
+                  event.currentTarget.value = ""
+                  return
+                }
+                if (file.size > MAX_PO_ATTACHMENT_SIZE_BYTES) {
+                  setAttachmentError(
+                    `Attachment exceeds ${MAX_PO_ATTACHMENT_SIZE_MB} MB limit.`
+                  )
+                  event.currentTarget.value = ""
+                  return
+                }
+                setAttachmentError("")
+                setAttachment(file)
+                event.currentTarget.value = ""
+              }}
+            />
+          </label>
+        </div>
+      )}
 
       {/* Asset Details */}
       <div className="rounded-lg border p-4">

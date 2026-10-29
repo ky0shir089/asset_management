@@ -41,7 +41,7 @@ export default async function ModulePage({
 
   return (
     <>
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <h2 className="mb-4 text-3xl font-bold">Module</h2>
 
         <Link href="/setup-aplikasi/module/new" className={buttonVariants()}>

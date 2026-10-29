@@ -3,19 +3,20 @@ import {
   boolean,
   foreignKey,
   pgEnum,
+  unique,
   pgTable,
   text,
   timestamp,
   uniqueIndex,
-  uuid,
   varchar,
 } from "drizzle-orm/pg-core"
 import { users } from "./auth-schema"
 import { relations, sql } from "drizzle-orm"
+import { integerId, serialId } from "../id"
 import { outlets } from "./network"
 
 export const assetCategories = pgTable("asset_categories", {
-  id: uuid("id").defaultRandom().primaryKey(),
+  id: serialId("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   createdBy: text("created_by")
     .notNull()
@@ -28,8 +29,8 @@ export const assetCategories = pgTable("asset_categories", {
 })
 
 export const assetCodes = pgTable("asset_codes", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  categoryId: uuid("category_id")
+  id: serialId("id").primaryKey(),
+  categoryId: integerId("category_id")
     .notNull()
     .references(() => assetCategories.id, { onDelete: "cascade" }),
   code: varchar("code", { length: 255 }).notNull(),
@@ -45,7 +46,7 @@ export const assetCodes = pgTable("asset_codes", {
 })
 
 export const assetBrands = pgTable("asset_brands", {
-  id: uuid("id").defaultRandom().primaryKey(),
+  id: serialId("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   createdBy: text("created_by")
     .notNull()
@@ -58,7 +59,7 @@ export const assetBrands = pgTable("asset_brands", {
 })
 
 export const processors = pgTable("processors", {
-  id: uuid("id").defaultRandom().primaryKey(),
+  id: serialId("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   createdBy: text("created_by")
     .notNull()
@@ -71,7 +72,7 @@ export const processors = pgTable("processors", {
 })
 
 export const rams = pgTable("rams", {
-  id: uuid("id").defaultRandom().primaryKey(),
+  id: serialId("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   createdBy: text("created_by")
     .notNull()
@@ -84,7 +85,7 @@ export const rams = pgTable("rams", {
 })
 
 export const storages = pgTable("storages", {
-  id: uuid("id").defaultRandom().primaryKey(),
+  id: serialId("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   createdBy: text("created_by")
     .notNull()
@@ -101,8 +102,8 @@ export const typeEnum = pgEnum("type", ["TEXT", "SELECT"])
 export const assetSpecs = pgTable(
   "asset_specs",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
-    codeId: uuid("code_id")
+    id: serialId("id").primaryKey(),
+    codeId: integerId("code_id")
       .notNull()
       .references(() => assetCodes.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 255 }).notNull(),
@@ -128,7 +129,7 @@ export const assetSpecs = pgTable(
 )
 
 export const banks = pgTable("banks", {
-  id: uuid("id").defaultRandom().primaryKey(),
+  id: serialId("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   createdBy: text("created_by")
     .notNull()
@@ -158,9 +159,9 @@ export const regencies = pgTable(
     name: varchar("name", { length: 255 }).notNull(),
   },
   (table) => [
-    uniqueIndex("regencies_province_id_code_unique").on(
-      table.provinceId,
-      table.code
+    unique("regencies_province_id_code_unique").on(
+      table.code,
+      table.provinceId
     ),
   ]
 )
@@ -179,10 +180,10 @@ export const districts = pgTable(
     name: varchar("name", { length: 255 }).notNull(),
   },
   (table) => [
-    uniqueIndex("districts_province_id_regency_id_code_unique").on(
+    unique("districts_province_id_regency_id_code_unique").on(
+      table.code,
       table.provinceId,
-      table.regencyId,
-      table.code
+      table.regencyId
     ),
     foreignKey({
       columns: [table.provinceId, table.regencyId],
@@ -232,7 +233,7 @@ export const villages = pgTable(
 )
 
 export const suppliers = pgTable("suppliers", {
-  id: uuid("id").defaultRandom().primaryKey(),
+  id: serialId("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   address: varchar("address", { length: 255 }),
   villageId: bigint("village_id", { mode: "number" }).references(
@@ -252,11 +253,11 @@ export const suppliers = pgTable("suppliers", {
 })
 
 export const supplierAccounts = pgTable("supplier_accounts", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  supplierId: uuid("supplier_id")
+  id: serialId("id").primaryKey(),
+  supplierId: integerId("supplier_id")
     .notNull()
     .references(() => suppliers.id, { onDelete: "cascade" }),
-  bankId: uuid("bank_id")
+  bankId: integerId("bank_id")
     .notNull()
     .references(() => banks.id, { onDelete: "cascade" }),
   accountNo: varchar("account_no", { length: 255 }).notNull(),
@@ -272,9 +273,9 @@ export const supplierAccounts = pgTable("supplier_accounts", {
 })
 
 export const customers = pgTable("customers", {
-  id: uuid("id").defaultRandom().primaryKey(),
+  id: serialId("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
-  outletId: uuid("outlet_id")
+  outletId: integerId("outlet_id")
     .notNull()
     .references(() => outlets.id, { onDelete: "cascade" }),
   createdBy: text("created_by")

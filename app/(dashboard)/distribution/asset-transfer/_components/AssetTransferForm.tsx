@@ -92,7 +92,10 @@ export default function AssetTransferForm({
   const codeItems = Array.from(
     new Map(
       options.assets
-        .filter((asset) => !selectedCategoryId || asset.categoryId === selectedCategoryId)
+        .filter(
+          (asset) =>
+            !selectedCategoryId || asset.categoryId === selectedCategoryId
+        )
         .map((asset) => [
           asset.assetCodeId,
           {
@@ -105,7 +108,8 @@ export default function AssetTransferForm({
 
   const assetItems = options.assets
     .filter((asset) => {
-      if (selectedCategoryId && asset.categoryId !== selectedCategoryId) return false
+      if (selectedCategoryId && asset.categoryId !== selectedCategoryId)
+        return false
       if (selectedCodeId && asset.assetCodeId !== selectedCodeId) return false
       return true
     })
@@ -141,7 +145,9 @@ export default function AssetTransferForm({
       setOptions(result.data)
     } catch (error) {
       if (currentRequest === requestId.current) {
-        toast.error(error instanceof Error ? error.message : "Something went wrong")
+        toast.error(
+          error instanceof Error ? error.message : "Something went wrong"
+        )
       }
     } finally {
       if (currentRequest === requestId.current) {
@@ -162,13 +168,18 @@ export default function AssetTransferForm({
         router.push("/distribution/asset-transfer")
         router.refresh()
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Something went wrong")
+        toast.error(
+          error instanceof Error ? error.message : "Something went wrong"
+        )
       }
     })
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
+    <form
+      onSubmit={form.handleSubmit(onSubmit)}
+      className="flex flex-col gap-6"
+    >
       <FieldGroup>
         <div className="grid gap-4 sm:grid-cols-2">
           <Controller
@@ -197,7 +208,9 @@ export default function AssetTransferForm({
                 <FieldDescription>
                   Only active companies outside LSA appear.
                 </FieldDescription>
-                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
               </Field>
             )}
           />
@@ -216,7 +229,9 @@ export default function AssetTransferForm({
                   aria-invalid={fieldState.invalid}
                   required
                 />
-                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
               </Field>
             )}
           />
@@ -232,7 +247,9 @@ export default function AssetTransferForm({
                 form.setValue("assetId", "")
               }}
               placeholder={
-                isLoadingOptions ? "Loading categories..." : "Filter by category"
+                isLoadingOptions
+                  ? "Loading categories..."
+                  : "Filter by category"
               }
               searchPlaceholder="Search category..."
               emptyMessage="No category found"
@@ -272,7 +289,9 @@ export default function AssetTransferForm({
                   value={field.value}
                   onValueChange={(value) => {
                     field.onChange(value)
-                    const asset = options.assets.find((item) => item.id === value)
+                    const asset = options.assets.find(
+                      (item) => item.id === value
+                    )
                     form.setValue("expectedOutletId", asset?.outletId ?? "")
                     form.setValue(
                       "expectedTransferId",
@@ -284,16 +303,17 @@ export default function AssetTransferForm({
                   }
                   searchPlaceholder="Search asset..."
                   emptyMessage="No available asset found for this company"
-                  disabled={
-                    isPending || isLoadingOptions || !companyId
-                  }
+                  disabled={isPending || isLoadingOptions || !companyId}
                   required
                   aria-invalid={fieldState.invalid}
                 />
                 <FieldDescription>
-                  Only TERSEDIA assets currently located in selected company appear.
+                  Only TERSEDIA assets currently located in selected company
+                  appear.
                 </FieldDescription>
-                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
               </Field>
             )}
           />
@@ -316,16 +336,16 @@ export default function AssetTransferForm({
                   }
                   searchPlaceholder="Search user..."
                   emptyMessage="No assigned user found for this company"
-                  disabled={
-                    isPending || isLoadingOptions || !companyId
-                  }
+                  disabled={isPending || isLoadingOptions || !companyId}
                   required
                   aria-invalid={fieldState.invalid}
                 />
                 <FieldDescription>
                   Asset moves to selected user&apos;s current outlet.
                 </FieldDescription>
-                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
               </Field>
             )}
           />

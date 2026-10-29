@@ -110,7 +110,7 @@ export function ForgotPasswordForm({
               <LoadingSwap isLoading={isLoading}>Send OTP</LoadingSwap>
             </Button>
 
-            <div className="text-sm text-center">
+            <div className="text-center text-sm">
               Remembered your password?{" "}
               <Link href="/login" className="underline underline-offset-4">
                 Login

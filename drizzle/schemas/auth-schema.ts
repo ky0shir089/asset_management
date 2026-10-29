@@ -1,4 +1,5 @@
 import { relations } from "drizzle-orm"
+import { integerId } from "../id"
 import {
   pgTable,
   text,
@@ -6,7 +7,6 @@ import {
   boolean,
   index,
   serial,
-  uuid,
   jsonb,
   varchar,
 } from "drizzle-orm/pg-core"
@@ -99,7 +99,7 @@ export const roleUser = pgTable("role_user", {
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  roleId: uuid("role_id")
+  roleId: integerId("role_id")
     .notNull()
     .references(() => roles.id, { onDelete: "cascade" }),
   isActive: boolean("is_active").default(true).notNull(),

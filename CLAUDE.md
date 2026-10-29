@@ -69,5 +69,7 @@ Environment:
 
 `lib/env.ts` validates required server environment variables: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `MEKARI_API_BASE_URL`, `MEKARI_API_CLIENT_ID`, `MEKARI_API_CLIENT_SECRET`, and `FONNTE_TOKEN`.
 
+Development:
+
 - "I prefer stupid simple code instead of smart one" 
 - "No need to create fallback and backward compatibility unless user asking to do so" 

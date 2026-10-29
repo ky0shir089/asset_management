@@ -1,7 +1,10 @@
 "use server"
 
 import { auth } from "@/lib/auth/auth"
-import { resetPasswordSchema, resetPasswordSchemaType } from "@/lib/formSchemas/auth-schema"
+import {
+  resetPasswordSchema,
+  resetPasswordSchemaType,
+} from "@/lib/formSchemas/auth-schema"
 
 export async function resetPassword(values: resetPasswordSchemaType) {
   const { otp, phoneNumber, password_confirmation } =
@@ -30,7 +33,8 @@ export async function resetPassword(values: resetPasswordSchemaType) {
   } catch (error) {
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Failed to reset password",
+      message:
+        error instanceof Error ? error.message : "Failed to reset password",
     }
   }
 }

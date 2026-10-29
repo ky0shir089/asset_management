@@ -1,10 +1,22 @@
-import { writeFile, mkdir, rm } from "node:fs/promises"
+import { readFile, writeFile, mkdir, rm } from "node:fs/promises"
 import { basename, join } from "node:path"
 import { randomUUID } from "node:crypto"
 import QRCode from "qrcode"
 
 const UPLOAD_BASE = join(process.cwd(), "public", "uploads", "received-assets")
 const RENT_UPLOAD_BASE = join(process.cwd(), "public", "uploads", "rent-assets")
+const PAYMENT_PROOF_BASE = join(
+  process.cwd(),
+  "data",
+  "uploads",
+  "rent-payment-proofs"
+)
+const PURCHASE_ORDER_BASE = join(
+  process.cwd(),
+  "data",
+  "uploads",
+  "purchase-orders"
+)
 
 export interface SavedPhoto {
   name: string
@@ -34,6 +46,8 @@ export {
 import {
   MAX_PHOTO_FILE_SIZE_BYTES,
   MAX_PHOTO_FILE_SIZE_MB,
+  MAX_PO_ATTACHMENT_SIZE_BYTES,
+  MAX_PO_ATTACHMENT_SIZE_MB,
 } from "./upload-constants"
 
 /**
@@ -182,4 +196,95 @@ export async function cleanupRentPhotos(photos: SavedPhoto[]): Promise<void> {
 export async function cleanupRentFiles(rentDtlId: string): Promise<void> {
   const dir = join(RENT_UPLOAD_BASE, rentDtlId)
   await rm(dir, { recursive: true, force: true })
+}
+
+export async function savePurchaseOrderAttachment(
+  purchaseOrderId: string,
+  file: File
+): Promise<SavedPhoto> {
+  if (!/^\d+$/.test(purchaseOrderId)) {
+    throw new Error("Invalid purchase order ID")
+  }
+  if (file.type !== "application/pdf") {
+    throw new Error("Attachment must be a PDF")
+  }
+  if (file.size === 0 || !(await file.slice(0, 5).text()).startsWith("%PDF-")) {
+    throw new Error("Attachment must be a valid PDF")
+  }
+  if (file.size > MAX_PO_ATTACHMENT_SIZE_BYTES) {
+    throw new Error(`Attachment exceeds ${MAX_PO_ATTACHMENT_SIZE_MB} MB limit`)
+  }
+
+  const filename = `${randomUUID()}.pdf`
+  const dir = join(PURCHASE_ORDER_BASE, purchaseOrderId)
+  await mkdir(dir, { recursive: true })
+  await writeFile(join(dir, filename), Buffer.from(await file.arrayBuffer()))
+  return { name: file.name, path: filename }
+}
+
+export async function readPurchaseOrderAttachment(
+  purchaseOrderId: string,
+  filename: string
+) {
+  if (!/^\d+$/.test(purchaseOrderId) || !/^[a-f0-9-]+\.pdf$/i.test(filename)) {
+    return null
+  }
+  try {
+    return {
+      buffer: await readFile(
+        join(PURCHASE_ORDER_BASE, purchaseOrderId, filename)
+      ),
+      contentType: "application/pdf",
+    }
+  } catch {
+    return null
+  }
+}
+
+export async function cleanupPurchaseOrderAttachment(
+  purchaseOrderId: string,
+  filename: string
+) {
+  if (!/^\d+$/.test(purchaseOrderId) || !/^[a-f0-9-]+\.pdf$/i.test(filename)) {
+    return
+  }
+  await rm(join(PURCHASE_ORDER_BASE, purchaseOrderId, filename), {
+    force: true,
+  })
+}
+
+export async function saveRentPaymentProof(file: File): Promise<SavedPhoto> {
+  if (!ALLOWED_MIME.has(file.type))
+    throw new Error("Invalid payment proof type")
+  if (file.size > MAX_PHOTO_FILE_SIZE_BYTES) {
+    throw new Error(`Payment proof exceeds ${MAX_PHOTO_FILE_SIZE_MB} MB limit`)
+  }
+
+  const ext = MIME_EXT[file.type]
+  const filename = `${randomUUID()}${ext}`
+  const dir = PAYMENT_PROOF_BASE
+  await mkdir(dir, { recursive: true })
+  await writeFile(join(dir, filename), Buffer.from(await file.arrayBuffer()))
+  return { name: file.name, path: filename }
+}
+
+export async function cleanupRentPaymentProof(filename: string) {
+  if (!/^[a-f0-9-]+\.(jpg|png|webp|pdf)$/.test(filename)) return
+  await rm(join(PAYMENT_PROOF_BASE, filename), { force: true })
+}
+
+export async function readRentPaymentProof(filename: string) {
+  if (!/^[a-f0-9-]+\.(jpg|png|webp|pdf)$/.test(filename)) return null
+  const contentType = Object.entries(MIME_EXT).find(
+    ([, ext]) => ext === `.${filename.split(".").at(-1)}`
+  )?.[0]
+  if (!contentType) return null
+  try {
+    return {
+      buffer: await readFile(join(PAYMENT_PROOF_BASE, filename)),
+      contentType,
+    }
+  } catch {
+    return null
+  }
 }

@@ -65,11 +65,13 @@ export default async function PrDetailPage({ params }: { params: Params }) {
   return (
     <Card>
       <CardHeader className="gap-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <CardTitle className="text-2xl">Purchase Request Detail</CardTitle>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <BackButton href="/asset-transaction/list-purchase-request" />
+            <CardTitle className="text-2xl">Purchase Request Detail</CardTitle>
+          </div>
 
           <div className="flex flex-wrap gap-2">
-            <BackButton href="/asset-transaction/list-purchase-request" />
             <PurchaseRequestStatusActions id={data.id} status={data.status} />
           </div>
         </div>

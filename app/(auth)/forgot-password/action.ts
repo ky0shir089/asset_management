@@ -16,7 +16,7 @@ export async function forgotPassword(values: ForgotPasswordSchemaType) {
       },
     })
 
-    if(!data){
+    if (!data) {
       return {
         success: false,
         message: "Failed to send OTP",
@@ -30,8 +30,7 @@ export async function forgotPassword(values: ForgotPasswordSchemaType) {
   } catch (error) {
     return {
       success: false,
-      message:
-        error instanceof Error ? error.message : "Failed to send OTP",
+      message: error instanceof Error ? error.message : "Failed to send OTP",
     }
   }
 }

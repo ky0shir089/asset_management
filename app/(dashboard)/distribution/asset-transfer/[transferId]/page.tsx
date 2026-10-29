@@ -24,13 +24,16 @@ export default async function AssetTransferDetailPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-4">
           <BackButton href="/distribution/asset-transfer" />
           <h1 className="text-3xl font-bold">Transfer Details</h1>
         </div>
         <Badge
           variant="outline"
-          className={cn(statusClasses[data.status] ?? "border-border bg-muted text-muted-foreground")}
+          className={cn(
+            statusClasses[data.status] ??
+              "border-border bg-muted text-muted-foreground"
+          )}
         >
           {data.status}
         </Badge>
@@ -83,7 +86,7 @@ export default async function AssetTransferDetailPage({
             </div>
             <Separator />
             <div className="grid grid-cols-3 gap-4">
-              <div className="text-sm text-muted-foreground flex items-center gap-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <User className="h-4 w-4" />
                 Assigned User
               </div>
@@ -100,12 +103,14 @@ export default async function AssetTransferDetailPage({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="text-sm text-muted-foreground flex items-center gap-2">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="h-4 w-4" />
                 Transfer Date
               </div>
-              <div className="md:col-span-3 font-medium">{data.transferDate}</div>
+              <div className="font-medium md:col-span-3">
+                {data.transferDate}
+              </div>
             </div>
           </CardContent>
         </Card>

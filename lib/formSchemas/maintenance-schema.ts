@@ -1,7 +1,8 @@
 import z from "zod"
+import { integerIdStringSchema } from "./id-schema"
 
 export const maintenanceSchema = z.object({
-  assetId: z.string().uuid(),
+  assetId: integerIdStringSchema,
   detail: z
     .string()
     .min(1, "Detail maintenance wajib diisi")

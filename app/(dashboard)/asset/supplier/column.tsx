@@ -18,7 +18,9 @@ export const columns: ColumnDef<supplierIndexType>[] = [
   {
     header: "Banks",
     cell: ({ row }) => {
-      const banks = uniqueValues(row.original.accounts.map((item) => item.bank.name))
+      const banks = uniqueValues(
+        row.original.accounts.map((item) => item.bank.name)
+      )
 
       return banks.length ? banks.join(", ") : "-"
     },

@@ -24,9 +24,7 @@ export default async function AssetSpecEditPage({
     <Card>
       <CardHeader className="flex flex-row items-center gap-4">
         <BackButton href="/asset/specification" />
-        <CardTitle className="text-2xl">
-          Edit Asset Specification
-        </CardTitle>
+        <CardTitle className="text-2xl">Edit Asset Specification</CardTitle>
       </CardHeader>
 
       <CardContent>

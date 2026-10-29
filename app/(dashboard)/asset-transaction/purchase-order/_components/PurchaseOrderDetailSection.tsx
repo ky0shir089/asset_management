@@ -40,9 +40,7 @@ export default function PurchaseOrderDetailSection({
     ? `${selectedPrDtl.assetCode.code} - ${selectedPrDtl.assetCode.name}`
     : "-"
 
-  const maxAllowedQuantity = selectedPrDtl
-    ? selectedPrDtl.remainingQuantity
-    : 1
+  const maxAllowedQuantity = selectedPrDtl ? selectedPrDtl.remainingQuantity : 1
 
   return (
     <div className="rounded-md border p-4">
@@ -62,7 +60,12 @@ export default function PurchaseOrderDetailSection({
       <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Field>
           <FieldLabel>Asset Code</FieldLabel>
-          <Input value={assetCodeText} readOnly tabIndex={-1} className="bg-muted" />
+          <Input
+            value={assetCodeText}
+            readOnly
+            tabIndex={-1}
+            className="bg-muted"
+          />
         </Field>
 
         <Field className="lg:col-span-2">
@@ -75,7 +78,9 @@ export default function PurchaseOrderDetailSection({
                     key={spec.id}
                     className="flex justify-between gap-3 border-b pb-1 last:border-b-0 last:pb-0"
                   >
-                    <span className="text-muted-foreground">{spec.specName}</span>
+                    <span className="text-muted-foreground">
+                      {spec.specName}
+                    </span>
                     <span className="text-right font-medium">
                       {spec.specValue || "-"}
                     </span>
@@ -91,11 +96,21 @@ export default function PurchaseOrderDetailSection({
         <div className="grid grid-cols-2 gap-2">
           <Field>
             <FieldLabel>PR Qty</FieldLabel>
-            <Input value={selectedPrDtl?.quantity ?? 0} readOnly tabIndex={-1} className="bg-muted" />
+            <Input
+              value={selectedPrDtl?.quantity ?? 0}
+              readOnly
+              tabIndex={-1}
+              className="bg-muted"
+            />
           </Field>
           <Field>
             <FieldLabel>Remaining Qty</FieldLabel>
-            <Input value={selectedPrDtl?.remainingQuantity ?? 0} readOnly tabIndex={-1} className="bg-muted" />
+            <Input
+              value={selectedPrDtl?.remainingQuantity ?? 0}
+              readOnly
+              tabIndex={-1}
+              className="bg-muted"
+            />
           </Field>
         </div>
       </div>

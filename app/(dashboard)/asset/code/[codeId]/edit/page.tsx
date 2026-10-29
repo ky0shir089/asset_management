@@ -17,7 +17,11 @@ const RenderForm = async ({ codeId }: { codeId: string }) => {
   return <AssetCodeForm data={data} categories={categories} />
 }
 
-export default async function AssetCodeEditPage({ params }: { params: Params }) {
+export default async function AssetCodeEditPage({
+  params,
+}: {
+  params: Params
+}) {
   const { codeId } = await params
 
   return (

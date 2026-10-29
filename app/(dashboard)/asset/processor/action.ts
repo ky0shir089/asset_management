@@ -46,10 +46,7 @@ export async function processorStore(values: processorSchemaType) {
   }
 }
 
-export async function processorUpdate(
-  id: string,
-  values: processorSchemaType
-) {
+export async function processorUpdate(id: string, values: processorSchemaType) {
   const user = await requireUser()
 
   try {

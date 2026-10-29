@@ -4,7 +4,10 @@ import { db } from "@/drizzle/db"
 import { companies } from "@/drizzle/schema"
 import { requireUser } from "@/data/require-user"
 import { authorizeAction } from "@/lib/auth/permission"
-import { companySchema, companySchemaType } from "@/lib/formSchemas/company-schema"
+import {
+  companySchema,
+  companySchemaType,
+} from "@/lib/formSchemas/company-schema"
 import { eq } from "drizzle-orm"
 
 export async function companyStore(values: companySchemaType) {

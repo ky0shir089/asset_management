@@ -1,7 +1,14 @@
 "use server"
 
 import { db } from "@/drizzle/db"
-import { branches, outlets, roleUser, sessions, users } from "@/drizzle/schema"
+import {
+  branches,
+  outlets,
+  roles,
+  roleUser,
+  sessions,
+  users,
+} from "@/drizzle/schema"
 import { auth } from "@/lib/auth/auth"
 import { env } from "@/lib/env"
 import {
@@ -284,9 +291,15 @@ export async function signUp(username: string): Promise<LoginActionResult> {
     const requestHeaders = await headers()
 
     await db.transaction(async (tx) => {
+      const role = await tx.query.roles.findFirst({
+        columns: { id: true },
+        where: eq(roles.name, "User"),
+      })
+      if (!role) throw new Error("Default User role not found")
+
       await tx.insert(roleUser).values({
         userId: data.user.id,
-        roleId: "a42a065a-7b85-42b9-b33d-4db437e4e425",
+        roleId: role.id,
         createdBy: data.user.id,
       })
 
@@ -322,7 +335,7 @@ export async function signUp(username: string): Promise<LoginActionResult> {
           createdBy: data.user.id,
         })
         .onConflictDoUpdate({
-          target: [outlets.outletId],
+          target: [outlets.branchId, outlets.outletId],
           set: {
             name: employee.employment.organization_name,
             updatedBy: data.user.id,

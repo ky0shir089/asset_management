@@ -37,7 +37,8 @@ export const columns: ColumnDef<assetTransferIndexType>[] = [
     cell: ({ row }) => (
       <span
         className={cn(
-          statusClasses[row.original.status] ?? "font-medium text-muted-foreground"
+          statusClasses[row.original.status] ??
+            "font-medium text-muted-foreground"
         )}
       >
         {row.original.status}

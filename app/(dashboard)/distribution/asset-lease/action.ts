@@ -49,7 +49,7 @@ import {
   sql,
 } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
-import z from "zod"
+import { integerIdStringSchema } from "@/lib/formSchemas/id-schema"
 
 async function generateRentNumber(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
@@ -73,7 +73,10 @@ async function generateRentNumber(
 
   const [{ lastSequence }] = await tx
     .select({
-      lastSequence: sql`coalesce(max(substring(${rentAssets.rentNo} from '/([0-9]+)$')::numeric), 0)`.mapWith(Number),
+      lastSequence:
+        sql`coalesce(max(substring(${rentAssets.rentNo} from '/([0-9]+)$')::numeric), 0)`.mapWith(
+          Number
+        ),
     })
     .from(rentAssets)
     .where(ilike(rentAssets.rentNo, `${yearScope}%`))
@@ -131,7 +134,7 @@ export async function getAssetCodes(categoryId: string) {
   const permission = await authorizeAction("asset-lease:create")
   if (!permission.authorized) return permission.response
 
-  if (!z.uuid().safeParse(categoryId).success) {
+  if (!integerIdStringSchema.safeParse(categoryId).success) {
     return { success: false as const, message: "Invalid asset category" }
   }
 
@@ -170,7 +173,7 @@ export async function getAssets(codeId: string) {
   const permission = await authorizeAction("asset-lease:create")
   if (!permission.authorized) return permission.response
 
-  if (!z.uuid().safeParse(codeId).success) {
+  if (!integerIdStringSchema.safeParse(codeId).success) {
     return { success: false as const, message: "Invalid asset code" }
   }
 
@@ -276,12 +279,6 @@ export async function assetLeaseStore(formData: FormData) {
     const preparedDetails: PreparedRentDetail[] = []
 
     try {
-      for (const files of photoGroups) {
-        const id = crypto.randomUUID()
-        preparedDetails.push({ id, photos: [] })
-        preparedDetails.at(-1)!.photos = await saveRentPhotos(id, files)
-      }
-
       await db.transaction(async (tx) => {
         const [company] = await tx
           .select({ id: companies.id })
@@ -306,7 +303,10 @@ export async function assetLeaseStore(formData: FormData) {
           .select({ id: outlets.id })
           .from(outlets)
           .innerJoin(branches, eq(outlets.branchId, branches.branchId))
-          .innerJoin(companies, eq(branches.companyId, companies.talentaCompanyId))
+          .innerJoin(
+            companies,
+            eq(branches.companyId, companies.talentaCompanyId)
+          )
           .where(eq(companies.code, "LSA"))
 
         const eligibleAssets = await tx
@@ -336,28 +336,36 @@ export async function assetLeaseStore(formData: FormData) {
           })
           .returning({ id: rentAssets.id })
 
-        await tx.insert(rentAssetDetails).values(
-          data.details.map((detail, index) => ({
-            id: preparedDetails[index]!.id,
-            rentAssetId: rentAsset.id,
-            assetId: detail.assetId,
-            dateStart: data.dateStart,
-            amount: detail.amount,
-            createdBy: user.id,
-          }))
-        )
-
-        await tx.insert(rentPhotoAssets).values(
-          preparedDetails.flatMap((detail) =>
-            detail.photos.map((photo) => ({
-              rentDtlId: detail.id,
-              name: photo.name,
-              path: photo.path,
-              type: "BEFORE" as const,
+        for (const [index, detail] of data.details.entries()) {
+          const [createdDetail] = await tx
+            .insert(rentAssetDetails)
+            .values({
+              rentAssetId: rentAsset.id,
+              assetId: detail.assetId,
+              dateStart: data.dateStart,
+              amount: detail.amount,
               createdBy: user.id,
-            }))
+            })
+            .returning({ id: rentAssetDetails.id })
+          const prepared = { id: createdDetail.id, photos: [] as SavedPhoto[] }
+          preparedDetails.push(prepared)
+          prepared.photos = await saveRentPhotos(
+            createdDetail.id,
+            photoGroups[index] ?? []
           )
-        )
+
+          if (prepared.photos.length > 0) {
+            await tx.insert(rentPhotoAssets).values(
+              prepared.photos.map((photo) => ({
+                rentDtlId: createdDetail.id,
+                name: photo.name,
+                path: photo.path,
+                type: "BEFORE" as const,
+                createdBy: user.id,
+              }))
+            )
+          }
+        }
 
         const booked = await tx
           .update(assetDatas)
@@ -405,7 +413,7 @@ export async function assetLeaseApprove(formData: FormData) {
 
   const id = String(formData.get("id") ?? "")
   const receiveDate = String(formData.get("receiveDate") ?? "")
-  if (!z.uuid().safeParse(id).success) {
+  if (!integerIdStringSchema.safeParse(id).success) {
     return { success: false, message: "Asset lease not found" }
   }
 
@@ -479,10 +487,7 @@ export async function assetLeaseApprove(formData: FormData) {
         .update(assetDatas)
         .set({ status: "DIGUNAKAN", updatedBy: user.id })
         .where(
-          and(
-            inArray(assetDatas.id, assetIds),
-            eq(assetDatas.status, "BOOKED")
-          )
+          and(inArray(assetDatas.id, assetIds), eq(assetDatas.status, "BOOKED"))
         )
         .returning({ id: assetDatas.id })
       if (claimed.length !== assetIds.length) {
@@ -792,7 +797,7 @@ export async function assetTransferStore(values: assetTransferSchemaType) {
           "Only active approved leased assets can be transferred"
         )
       }
-      if (!superAdmin && detail.createdBy !== user.id) {
+      if (!superAdmin && detail.createdBy !== user.id && user.role !== "Admin GA") {
         throw new AssetLeaseWorkflowError("Asset lease not found")
       }
 
@@ -954,7 +959,7 @@ export async function assetLeaseReject(formData: FormData) {
 
   const id = String(formData.get("id") ?? "")
   const reason = String(formData.get("reason") ?? "")
-  if (!z.uuid().safeParse(id).success) {
+  if (!integerIdStringSchema.safeParse(id).success) {
     return { success: false, message: "Asset lease not found" }
   }
 
@@ -1017,10 +1022,7 @@ export async function assetLeaseReject(formData: FormData) {
         .update(assetDatas)
         .set({ status: "TERSEDIA", updatedBy: user.id })
         .where(
-          and(
-            inArray(assetDatas.id, assetIds),
-            eq(assetDatas.status, "BOOKED")
-          )
+          and(inArray(assetDatas.id, assetIds), eq(assetDatas.status, "BOOKED"))
         )
 
       await tx.insert(rentPhotoAssets).values(
@@ -1057,7 +1059,10 @@ export async function assetTransferReceive(formData: FormData) {
   const photos = formData
     .getAll("photos")
     .filter((entry): entry is File => entry instanceof File && entry.size > 0)
-  const validation = assetTransferReceiptSchema.safeParse({ transferId, photos })
+  const validation = assetTransferReceiptSchema.safeParse({
+    transferId,
+    photos,
+  })
   if (!validation.success) {
     return {
       success: false,

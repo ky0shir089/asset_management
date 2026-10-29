@@ -1,7 +1,12 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { LoadingSwap } from "@/components/ui/loading-swap"
 import {
@@ -30,7 +35,10 @@ interface AssetCodeFormProps {
   categories: assetCategoryOptionType[]
 }
 
-export default function AssetCodeForm({ data, categories }: AssetCodeFormProps) {
+export default function AssetCodeForm({
+  data,
+  categories,
+}: AssetCodeFormProps) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
   const categoryItems = categories.map((category) => ({

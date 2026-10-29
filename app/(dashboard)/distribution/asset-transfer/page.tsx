@@ -40,7 +40,10 @@ export default async function AssetTransferPage({
     <>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-3xl font-bold">Asset Transfer</h1>
-        <Link href="/distribution/asset-transfer/new" className={buttonVariants()}>
+        <Link
+          href="/distribution/asset-transfer/new"
+          className={buttonVariants()}
+        >
           Add New
         </Link>
       </div>

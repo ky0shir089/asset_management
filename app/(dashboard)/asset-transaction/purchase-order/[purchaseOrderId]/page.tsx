@@ -83,19 +83,19 @@ export default async function PurchaseOrderDetailPage({
   return (
     <Card>
       <CardHeader className="gap-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <CardTitle className="text-2xl">Purchase Order Detail</CardTitle>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <BackButton href="/asset-transaction/purchase-order" />
+            <CardTitle className="text-2xl">Purchase Order Detail</CardTitle>
+          </div>
 
           <div className="flex flex-wrap gap-2">
-            <BackButton href="/asset-transaction/purchase-order" />
-            {data.status === "NEW" && (
-              <Link
-                href={`/asset-transaction/purchase-order/${purchaseOrderId}/edit`}
-                className={buttonVariants({ size: "sm" })}
-              >
-                Edit
-              </Link>
-            )}
+            <Link
+              href={`/asset-transaction/purchase-order/${purchaseOrderId}/edit`}
+              className={buttonVariants({ size: "sm" })}
+            >
+              Edit
+            </Link>
             <PurchaseOrderPdfDownloadButton purchaseOrderId={purchaseOrderId} />
           </div>
         </div>
@@ -118,7 +118,19 @@ export default async function PurchaseOrderDetailPage({
             value={formatPurchaseRequest(data.purchaseRequest)}
           />
           <InfoItem label="Status" value={data.status} />
+          <InfoItem label="PV No" value={data.pvNo ?? "-"} />
           <InfoItem label="Description" value={data.description} />
+          {data.attachment && (
+            <div className="rounded-md border p-3">
+              <p className="text-sm text-muted-foreground">Attachment</p>
+              <a
+                href={`/asset-transaction/purchase-order/${purchaseOrderId}/attachment`}
+                className="inline-flex min-h-11 items-center font-medium underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              >
+                Download PDF
+              </a>
+            </div>
+          )}
           <InfoItem
             label="Shipping Cost"
             value={formatCurrency(shippingCost)}

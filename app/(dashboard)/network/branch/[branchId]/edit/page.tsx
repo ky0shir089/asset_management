@@ -9,7 +9,10 @@ import BranchForm from "../../_components/BranchForm"
 type Params = Promise<{ branchId: string }>
 
 const RenderForm = async ({ branchId }: { branchId: string }) => {
-  const [data, companies] = await Promise.all([branchShow(branchId), companyOptions()])
+  const [data, companies] = await Promise.all([
+    branchShow(branchId),
+    companyOptions(),
+  ])
 
   return <BranchForm data={data} companies={companies} />
 }

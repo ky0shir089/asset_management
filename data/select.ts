@@ -45,7 +45,7 @@ export async function menuOptions() {
         },
       },
     },
-    orderBy: (menus, { asc }) => [asc(menus.createdAt), asc(menus.position)],
+    orderBy: (menus, { asc }) => [asc(menus.id), asc(menus.position)],
   })
 }
 export type menuOptionsType = Awaited<ReturnType<typeof menuOptions>>[0]
@@ -139,7 +139,7 @@ export async function assetSpecOptions() {
       isRequired: true,
       createable: true,
     },
-    orderBy: (assetSpecs, { asc }) => [asc(assetSpecs.createdAt)],
+    orderBy: (assetSpecs, { asc }) => [asc(assetSpecs.id)],
   })
 }
 export type assetSpecOptionType = Awaited<
@@ -380,11 +380,13 @@ export async function purchaseRequestOptions(id?: string) {
   await requireUser()
 
   return await db.query.purchaseRequests.findMany({
-    where: and(
-      eq(purchaseRequests.status, "APPROVED"),
-      ne(purchaseRequests.poStatus, "CLOSED"),
-      id ? eq(purchaseRequests.id, id) : isNotNull(purchaseRequests.id)
-    ),
+    where: id
+      ? eq(purchaseRequests.id, id)
+      : and(
+          eq(purchaseRequests.status, "APPROVED"),
+          ne(purchaseRequests.poStatus, "CLOSED"),
+          isNotNull(purchaseRequests.id)
+        ),
     with: {
       company: {
         columns: {
@@ -586,6 +588,7 @@ export async function purchaseOrderDetailOptionsForReceivedAsset() {
           poNo: true,
           date: true,
           description: true,
+          pvNo: true,
           status: true,
           createdBy: true,
         },
@@ -665,10 +668,12 @@ export async function purchaseOrderDetailOptionsForReceivedAsset() {
       poNo: pod.purchaseOrder.poNo,
       poDate: pod.purchaseOrder.date,
       poDescription: pod.purchaseOrder.description,
+      pvNo: pod.purchaseOrder.pvNo,
       poStatus: pod.purchaseOrder.status,
       createdBy: pod.purchaseOrder.createdBy,
       company: pod.purchaseOrder.purchaseRequest.company,
       quantity: orderedQuantity,
+      totalAmount: pod.total ?? orderedQuantity * (pod.price ?? 0),
       receivedQuantity: alreadyReceived,
       remainingQuantity,
       assetCode: pod.prDetail?.assetCode ?? null,

@@ -12,6 +12,10 @@ export const columns: ColumnDef<companyIndexType>[] = [
     accessorKey: "id",
   },
   {
+    header: "Talenta Company ID",
+    accessorKey: "talentaCompanyId",
+  },
+  {
     header: "Name",
     accessorKey: "name",
   },

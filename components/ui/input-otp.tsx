@@ -38,9 +38,7 @@ function InputOTP({
   }
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const nextValue = event.target.value
-      .replace(/\D/g, "")
-      .slice(0, maxLength)
+    const nextValue = event.target.value.replace(/\D/g, "").slice(0, maxLength)
 
     onChange?.(nextValue)
   }
@@ -70,10 +68,7 @@ function InputOTP({
   )
 }
 
-function InputOTPGroup({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
+function InputOTPGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="input-otp-group"
@@ -116,7 +111,10 @@ function InputOTPSeparator({
     <div
       data-slot="input-otp-separator"
       role="separator"
-      className={cn("flex items-center justify-center px-1 text-muted-foreground", className)}
+      className={cn(
+        "flex items-center justify-center px-1 text-muted-foreground",
+        className
+      )}
       {...props}
     >
       -

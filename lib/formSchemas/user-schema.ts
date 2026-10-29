@@ -1,7 +1,8 @@
 import z from "zod"
+import { integerIdStringSchema } from "./id-schema"
 
 export const userSchema = z.object({
   changePassword: z.boolean(),
-  roleId: z.string().min(1),
+  roleId: integerIdStringSchema,
 })
 export type userSchemaType = z.infer<typeof userSchema>

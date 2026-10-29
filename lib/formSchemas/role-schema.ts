@@ -1,8 +1,9 @@
 import z from "zod"
+import { integerIdStringSchema } from "./id-schema"
 
 export const roleSchema = z.object({
   name: z.string().min(1),
-  menus: z.array(z.string()).min(1, "Select at least one menu"),
+  menus: z.array(integerIdStringSchema).min(1, "Select at least one menu"),
   permissions: z.array(z.number()).optional(),
 })
 export type roleSchemaType = z.infer<typeof roleSchema>

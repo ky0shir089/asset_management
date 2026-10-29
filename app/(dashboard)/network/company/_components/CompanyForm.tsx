@@ -34,6 +34,7 @@ export default function CompanyForm({ data }: CompanyFormProps) {
   const form = useForm<companySchemaType>({
     resolver: zodResolver(companySchema),
     defaultValues: {
+      talentaCompanyId: data?.talentaCompanyId ?? 0,
       name: data?.name || "",
       code: data?.code || "",
       isActive: data?.isActive ?? true,
@@ -63,6 +64,29 @@ export default function CompanyForm({ data }: CompanyFormProps) {
       className="flex flex-col gap-8"
     >
       <FieldGroup>
+        <Controller
+          name="talentaCompanyId"
+          control={form.control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor={field.name}>Talenta Company ID</FieldLabel>
+              <Input
+                {...field}
+                type="number"
+                min={1}
+                step={1}
+                id={field.name}
+                onChange={(event) => field.onChange(event.target.valueAsNumber)}
+                aria-invalid={fieldState.invalid}
+                placeholder="Talenta Company ID"
+                autoComplete="off"
+                required
+              />
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+
         <Controller
           name="name"
           control={form.control}

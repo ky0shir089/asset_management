@@ -1,4 +1,5 @@
 import { relations } from "drizzle-orm"
+import { integerId, serialId } from "../id"
 import {
   boolean,
   pgTable,
@@ -6,15 +7,14 @@ import {
   smallint,
   text,
   timestamp,
-  uuid,
   varchar,
 } from "drizzle-orm/pg-core"
 import { modules } from "./module"
 import { users } from "./auth-schema"
 
 export const menus = pgTable("menus", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  moduleId: uuid("module_id")
+  id: serialId("id").primaryKey(),
+  moduleId: integerId("module_id")
     .notNull()
     .references(() => modules.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
@@ -34,7 +34,7 @@ export const menus = pgTable("menus", {
 
 export const permissions = pgTable("permissions", {
   id: serial("id").primaryKey(),
-  menuId: uuid("menu_id")
+  menuId: integerId("menu_id")
     .notNull()
     .references(() => menus.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),

@@ -54,6 +54,7 @@ export default function ReceivedAssetForm({
   const [serialNumbers, setSerialNumbers] = useState<string[]>(
     createEmptySerialNumbers(1)
   )
+  const [aktivas, setAktivas] = useState<string[]>(createEmptySerialNumbers(1))
 
   const purchaseOrderItems = useMemo(() => {
     const purchaseOrders = new Map<string, { label: string; value: string }>()
@@ -120,6 +121,7 @@ export default function ReceivedAssetForm({
     setReceivedQuantity(1)
     setPhotoGroups(createEmptyPhotoGroups(1))
     setSerialNumbers(createEmptySerialNumbers(1))
+    setAktivas(createEmptySerialNumbers(1))
   }
 
   function handlePoDetailChange(value: string) {
@@ -128,6 +130,7 @@ export default function ReceivedAssetForm({
     setReceivedQuantity(1)
     setPhotoGroups(createEmptyPhotoGroups(1))
     setSerialNumbers(createEmptySerialNumbers(1))
+    setAktivas(createEmptySerialNumbers(1))
   }
 
   function handleReceivedQuantityChange(
@@ -148,10 +151,19 @@ export default function ReceivedAssetForm({
     setSerialNumbers((current) =>
       Array.from({ length: nextQuantity }, (_, index) => current[index] ?? "")
     )
+    setAktivas((current) =>
+      Array.from({ length: nextQuantity }, (_, index) => current[index] ?? "")
+    )
   }
 
   function handleSerialNumberChange(index: number, value: string) {
     setSerialNumbers((current) =>
+      current.map((item, i) => (i === index ? value : item))
+    )
+  }
+
+  function handleAktivaChange(index: number, value: string) {
+    setAktivas((current) =>
       current.map((item, i) => (i === index ? value : item))
     )
   }
@@ -218,6 +230,12 @@ export default function ReceivedAssetForm({
       }
     })
 
+    aktivas.forEach((aktiva, index) => {
+      if (aktiva.trim()) {
+        formData.set(`aktiva-${index}`, aktiva.trim())
+      }
+    })
+
     photoGroups.forEach((group, groupIndex) => {
       for (const file of group.files) {
         formData.append(`photos-${groupIndex}`, file)
@@ -265,9 +283,11 @@ export default function ReceivedAssetForm({
         selectedPoDetailId={selectedPoDetailId}
         photoGroups={photoGroups}
         serialNumbers={serialNumbers}
+        aktivas={aktivas}
         maxPhotoFileSizeMb={MAX_PHOTO_FILE_SIZE_MB}
         hasSelectedPoDetail={!!selectedPoDetail}
         onSerialNumberChange={handleSerialNumberChange}
+        onAktivaChange={handleAktivaChange}
         onFileChange={handleFileChange}
       />
 

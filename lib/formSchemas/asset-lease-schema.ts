@@ -4,6 +4,7 @@ import {
   MAX_PHOTO_FILE_SIZE_MB,
 } from "@/lib/upload-constants"
 import z from "zod"
+import { integerIdStringSchema } from "./id-schema"
 
 const acceptedPhotoTypes = new Set([
   "image/jpeg",
@@ -48,14 +49,14 @@ export const rentPhotoFilesSchema = z
   })
 
 const assetLeaseDetailSchema = z.object({
-  assetId: z.uuid("Asset is required"),
+  assetId: integerIdStringSchema,
   amount: z.number().int().min(0, "Amount cannot be negative"),
   photos: rentPhotoFilesSchema,
 })
 
 export const assetLeaseSchema = z
   .object({
-    companyId: z.uuid("Company is required"),
+    companyId: integerIdStringSchema,
     dateStart: z.iso.date("Rent date is required"),
     note: z.string().trim().max(255).optional(),
     details: z.array(assetLeaseDetailSchema).min(1, "Add at least one asset"),
@@ -75,13 +76,13 @@ export const assetLeaseSchema = z
   })
 
 const assetLeaseDecisionDetailSchema = z.object({
-  rentDetailId: z.uuid("Leased asset not found"),
+  rentDetailId: integerIdStringSchema,
   photos: rentPhotoFilesSchema,
 })
 
 export const assetLeaseApproveSchema = z
   .object({
-    id: z.uuid("Asset lease not found"),
+    id: integerIdStringSchema,
     rentDate: z.iso.date("Invalid rent date"),
     receiveDate: z.iso.date("Receive date is required"),
     details: z
@@ -105,7 +106,7 @@ export const assetLeaseRejectReasons = [
 ] as const
 
 export const assetLeaseRejectSchema = z.object({
-  id: z.uuid("Asset lease not found"),
+  id: integerIdStringSchema,
   reason: z.enum(assetLeaseRejectReasons, "Select a valid rejection reason"),
   details: z
     .array(assetLeaseDecisionDetailSchema)
@@ -113,13 +114,15 @@ export const assetLeaseRejectSchema = z.object({
 })
 
 export const assetLeaseReturnSchema = z.object({
-  rentId: z.uuid("Asset lease not found"),
-  rentDetailId: z.uuid("Leased asset not found"),
-  dateEnd: z
-    .iso
+  rentId: integerIdStringSchema,
+  rentDetailId: integerIdStringSchema,
+  dateEnd: z.iso
     .date("Return date is required")
-    .refine((date) => date <= jakartaToday(), "Return date cannot be in the future"),
-  outletId: z.uuid("Receiving outlet is required"),
+    .refine(
+      (date) => date <= jakartaToday(),
+      "Return date cannot be in the future"
+    ),
+  outletId: integerIdStringSchema,
   photos: rentPhotoFilesSchema,
 })
 

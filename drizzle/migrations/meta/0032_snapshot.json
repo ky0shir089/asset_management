@@ -1,0 +1,108 @@
+{
+  "id": "c49a36f6-6938-4daf-b75d-86b8f8c1b6a2",
+  "prevId": "2de20295-0ea0-4d00-bff7-2b8571caacb5",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.rent_invoices": {
+      "name": "rent_invoices", "schema": "", "columns": {
+        "id": { "name": "id", "type": "serial", "primaryKey": true, "notNull": true },
+        "company_id": { "name": "company_id", "type": "integer", "primaryKey": false, "notNull": true },
+        "company_name": { "name": "company_name", "type": "varchar(255)", "primaryKey": false, "notNull": true },
+        "period_start": { "name": "period_start", "type": "date", "primaryKey": false, "notNull": true },
+        "period_end": { "name": "period_end", "type": "date", "primaryKey": false, "notNull": true },
+        "due_date": { "name": "due_date", "type": "date", "primaryKey": false, "notNull": true },
+        "invoice_no": { "name": "invoice_no", "type": "varchar(64)", "primaryKey": false, "notNull": false },
+        "status": { "name": "status", "type": "rent_invoice_status", "typeSchema": "public", "primaryKey": false, "notNull": true, "default": "'DRAFT'" },
+        "subtotal": { "name": "subtotal", "type": "integer", "primaryKey": false, "notNull": true, "default": 0 },
+        "vat_rate": { "name": "vat_rate", "type": "integer", "primaryKey": false, "notNull": true, "default": 0 },
+        "vat_amount": { "name": "vat_amount", "type": "integer", "primaryKey": false, "notNull": true, "default": 0 },
+        "withholding_rate": { "name": "withholding_rate", "type": "integer", "primaryKey": false, "notNull": true, "default": 0 },
+        "withholding_amount": { "name": "withholding_amount", "type": "integer", "primaryKey": false, "notNull": true, "default": 0 },
+        "deposit_deduction": { "name": "deposit_deduction", "type": "integer", "primaryKey": false, "notNull": true, "default": 0 },
+        "total": { "name": "total", "type": "integer", "primaryKey": false, "notNull": true, "default": 0 },
+        "issued_at": { "name": "issued_at", "type": "timestamp", "primaryKey": false, "notNull": false },
+        "cancelled_at": { "name": "cancelled_at", "type": "timestamp", "primaryKey": false, "notNull": false },
+        "cancel_reason": { "name": "cancel_reason", "type": "text", "primaryKey": false, "notNull": false },
+        "created_by": { "name": "created_by", "type": "text", "primaryKey": false, "notNull": true },
+        "updated_by": { "name": "updated_by", "type": "text", "primaryKey": false, "notNull": false },
+        "created_at": { "name": "created_at", "type": "timestamp", "primaryKey": false, "notNull": true, "default": "now()" },
+        "updated_at": { "name": "updated_at", "type": "timestamp", "primaryKey": false, "notNull": false }
+      }, "indexes": {
+        "rent_invoices_company_period_unique": { "name": "rent_invoices_company_period_unique", "columns": [{ "expression": "company_id", "isExpression": false, "asc": true, "nulls": "last" }, { "expression": "period_start", "isExpression": false, "asc": true, "nulls": "last" }, { "expression": "period_end", "isExpression": false, "asc": true, "nulls": "last" }], "isUnique": true, "concurrently": false, "method": "btree", "with": {}, "where": "\"status\" <> 'CANCELLED'" },
+        "rent_invoices_invoice_no_unique": { "name": "rent_invoices_invoice_no_unique", "columns": [{ "expression": "invoice_no", "isExpression": false, "asc": true, "nulls": "last" }], "isUnique": true, "concurrently": false, "method": "btree", "with": {} },
+        "rent_invoices_company_period_idx": { "name": "rent_invoices_company_period_idx", "columns": [{ "expression": "company_id", "isExpression": false, "asc": true, "nulls": "last" }, { "expression": "period_start", "isExpression": false, "asc": true, "nulls": "last" }, { "expression": "period_end", "isExpression": false, "asc": true, "nulls": "last" }], "isUnique": false, "concurrently": false, "method": "btree", "with": {} },
+        "rent_invoices_status_due_idx": { "name": "rent_invoices_status_due_idx", "columns": [{ "expression": "status", "isExpression": false, "asc": true, "nulls": "last" }, { "expression": "due_date", "isExpression": false, "asc": true, "nulls": "last" }], "isUnique": false, "concurrently": false, "method": "btree", "with": {} }
+      }, "foreignKeys": {
+        "rent_invoices_company_id_companies_id_fk": { "name": "rent_invoices_company_id_companies_id_fk", "tableFrom": "rent_invoices", "tableTo": "companies", "columnsFrom": ["company_id"], "columnsTo": ["id"], "onDelete": "restrict", "onUpdate": "no action" },
+        "rent_invoices_created_by_users_id_fk": { "name": "rent_invoices_created_by_users_id_fk", "tableFrom": "rent_invoices", "tableTo": "users", "columnsFrom": ["created_by"], "columnsTo": ["id"], "onDelete": "restrict", "onUpdate": "no action" },
+        "rent_invoices_updated_by_users_id_fk": { "name": "rent_invoices_updated_by_users_id_fk", "tableFrom": "rent_invoices", "tableTo": "users", "columnsFrom": ["updated_by"], "columnsTo": ["id"], "onDelete": "set null", "onUpdate": "no action" },
+        "rent_invoice_items_invoice_id_rent_invoices_id_fk": { "name": "rent_invoice_items_invoice_id_rent_invoices_id_fk", "tableFrom": "rent_invoice_items", "tableTo": "rent_invoices", "columnsFrom": ["invoice_id"], "columnsTo": ["id"], "onDelete": "cascade", "onUpdate": "no action" },
+        "rent_invoice_items_rent_detail_id_rent_asset_details_id_fk": { "name": "rent_invoice_items_rent_detail_id_rent_asset_details_id_fk", "tableFrom": "rent_invoice_items", "tableTo": "rent_asset_details", "columnsFrom": ["rent_detail_id"], "columnsTo": ["id"], "onDelete": "set null", "onUpdate": "no action" },
+        "rent_invoice_items_asset_id_asset_datas_id_fk": { "name": "rent_invoice_items_asset_id_asset_datas_id_fk", "tableFrom": "rent_invoice_items", "tableTo": "asset_datas", "columnsFrom": ["asset_id"], "columnsTo": ["id"], "onDelete": "set null", "onUpdate": "no action" },
+        "rent_invoice_payments_invoice_id_rent_invoices_id_fk": { "name": "rent_invoice_payments_invoice_id_rent_invoices_id_fk", "tableFrom": "rent_invoice_payments", "tableTo": "rent_invoices", "columnsFrom": ["invoice_id"], "columnsTo": ["id"], "onDelete": "restrict", "onUpdate": "no action" },
+        "rent_invoice_payments_created_by_users_id_fk": { "name": "rent_invoice_payments_created_by_users_id_fk", "tableFrom": "rent_invoice_payments", "tableTo": "users", "columnsFrom": ["created_by"], "columnsTo": ["id"], "onDelete": "restrict", "onUpdate": "no action" },
+        "rent_invoice_events_invoice_id_rent_invoices_id_fk": { "name": "rent_invoice_events_invoice_id_rent_invoices_id_fk", "tableFrom": "rent_invoice_events", "tableTo": "rent_invoices", "columnsFrom": ["invoice_id"], "columnsTo": ["id"], "onDelete": "restrict", "onUpdate": "no action" },
+        "rent_invoice_events_created_by_users_id_fk": { "name": "rent_invoice_events_created_by_users_id_fk", "tableFrom": "rent_invoice_events", "tableTo": "users", "columnsFrom": ["created_by"], "columnsTo": ["id"], "onDelete": "restrict", "onUpdate": "no action" }
+      }, "compositePrimaryKeys": {}, "uniqueConstraints": {}, "policies": {}, "checkConstraints": {}, "isRLSEnabled": false
+    },
+    "public.rent_invoice_items": {
+      "name": "rent_invoice_items", "schema": "", "columns": {
+        "id": { "name": "id", "type": "serial", "primaryKey": true, "notNull": true },
+        "invoice_id": { "name": "invoice_id", "type": "integer", "primaryKey": false, "notNull": true },
+        "rent_detail_id": { "name": "rent_detail_id", "type": "integer", "primaryKey": false, "notNull": false },
+        "asset_id": { "name": "asset_id", "type": "integer", "primaryKey": false, "notNull": false },
+        "asset_number": { "name": "asset_number", "type": "varchar(255)", "primaryKey": false, "notNull": false },
+        "description": { "name": "description", "type": "varchar(255)", "primaryKey": false, "notNull": true },
+        "item_type": { "name": "item_type", "type": "varchar(32)", "primaryKey": false, "notNull": true },
+        "quantity": { "name": "quantity", "type": "integer", "primaryKey": false, "notNull": true, "default": 1 },
+        "unit_amount": { "name": "unit_amount", "type": "integer", "primaryKey": false, "notNull": true, "default": 0 },
+        "amount": { "name": "amount", "type": "integer", "primaryKey": false, "notNull": true, "default": 0 },
+        "created_at": { "name": "created_at", "type": "timestamp", "primaryKey": false, "notNull": true, "default": "now()" }
+      }, "indexes": { "rent_invoice_items_invoice_idx": { "name": "rent_invoice_items_invoice_idx", "columns": [{ "expression": "invoice_id", "isExpression": false, "asc": true, "nulls": "last" }], "isUnique": false, "concurrently": false, "method": "btree", "with": {} } }, "foreignKeys": {
+        "rent_invoice_items_invoice_id_rent_invoices_id_fk": { "name": "rent_invoice_items_invoice_id_rent_invoices_id_fk", "tableFrom": "rent_invoice_items", "tableTo": "rent_invoices", "columnsFrom": ["invoice_id"], "columnsTo": ["id"], "onDelete": "cascade", "onUpdate": "no action" },
+        "rent_invoice_items_rent_detail_id_rent_asset_details_id_fk": { "name": "rent_invoice_items_rent_detail_id_rent_asset_details_id_fk", "tableFrom": "rent_invoice_items", "tableTo": "rent_asset_details", "columnsFrom": ["rent_detail_id"], "columnsTo": ["id"], "onDelete": "set null", "onUpdate": "no action" },
+        "rent_invoice_items_asset_id_asset_datas_id_fk": { "name": "rent_invoice_items_asset_id_asset_datas_id_fk", "tableFrom": "rent_invoice_items", "tableTo": "asset_datas", "columnsFrom": ["asset_id"], "columnsTo": ["id"], "onDelete": "set null", "onUpdate": "no action" }
+      }, "compositePrimaryKeys": {}, "uniqueConstraints": {}, "policies": {}, "checkConstraints": {}, "isRLSEnabled": false
+    },
+    "public.rent_invoice_payments": {
+      "name": "rent_invoice_payments", "schema": "", "columns": {
+        "id": { "name": "id", "type": "serial", "primaryKey": true, "notNull": true },
+        "invoice_id": { "name": "invoice_id", "type": "integer", "primaryKey": false, "notNull": true },
+        "paid_at": { "name": "paid_at", "type": "date", "primaryKey": false, "notNull": true },
+        "method": { "name": "method", "type": "rent_payment_method", "typeSchema": "public", "primaryKey": false, "notNull": true },
+        "amount": { "name": "amount", "type": "integer", "primaryKey": false, "notNull": true },
+        "reference": { "name": "reference", "type": "varchar(255)", "primaryKey": false, "notNull": false },
+        "created_by": { "name": "created_by", "type": "text", "primaryKey": false, "notNull": true },
+        "created_at": { "name": "created_at", "type": "timestamp", "primaryKey": false, "notNull": true, "default": "now()" }
+      }, "indexes": { "rent_invoice_payments_invoice_idx": { "name": "rent_invoice_payments_invoice_idx", "columns": [{ "expression": "invoice_id", "isExpression": false, "asc": true, "nulls": "last" }], "isUnique": false, "concurrently": false, "method": "btree", "with": {} } }, "foreignKeys": {
+        "rent_invoice_payments_invoice_id_rent_invoices_id_fk": { "name": "rent_invoice_payments_invoice_id_rent_invoices_id_fk", "tableFrom": "rent_invoice_payments", "tableTo": "rent_invoices", "columnsFrom": ["invoice_id"], "columnsTo": ["id"], "onDelete": "restrict", "onUpdate": "no action" },
+        "rent_invoice_payments_created_by_users_id_fk": { "name": "rent_invoice_payments_created_by_users_id_fk", "tableFrom": "rent_invoice_payments", "tableTo": "users", "columnsFrom": ["created_by"], "columnsTo": ["id"], "onDelete": "restrict", "onUpdate": "no action" }
+      }, "compositePrimaryKeys": {}, "uniqueConstraints": {}, "policies": {}, "checkConstraints": { "rent_invoice_payments_positive": { "name": "rent_invoice_payments_positive", "value": "\"amount\" > 0" } }, "isRLSEnabled": false
+    },
+    "public.rent_invoice_events": {
+      "name": "rent_invoice_events", "schema": "", "columns": {
+        "id": { "name": "id", "type": "serial", "primaryKey": true, "notNull": true },
+        "invoice_id": { "name": "invoice_id", "type": "integer", "primaryKey": false, "notNull": true },
+        "action": { "name": "action", "type": "varchar(32)", "primaryKey": false, "notNull": true },
+        "detail": { "name": "detail", "type": "jsonb", "primaryKey": false, "notNull": true, "default": "'{}'::jsonb" },
+        "ip_address": { "name": "ip_address", "type": "varchar(64)", "primaryKey": false, "notNull": false },
+        "created_by": { "name": "created_by", "type": "text", "primaryKey": false, "notNull": true },
+        "created_at": { "name": "created_at", "type": "timestamp", "primaryKey": false, "notNull": true, "default": "now()" }
+      }, "indexes": { "rent_invoice_events_invoice_idx": { "name": "rent_invoice_events_invoice_idx", "columns": [{ "expression": "invoice_id", "isExpression": false, "asc": true, "nulls": "last" }], "isUnique": false, "concurrently": false, "method": "btree", "with": {} } }, "foreignKeys": {
+        "rent_invoice_events_invoice_id_rent_invoices_id_fk": { "name": "rent_invoice_events_invoice_id_rent_invoices_id_fk", "tableFrom": "rent_invoice_events", "tableTo": "rent_invoices", "columnsFrom": ["invoice_id"], "columnsTo": ["id"], "onDelete": "restrict", "onUpdate": "no action" },
+        "rent_invoice_events_created_by_users_id_fk": { "name": "rent_invoice_events_created_by_users_id_fk", "tableFrom": "rent_invoice_events", "tableTo": "users", "columnsFrom": ["created_by"], "columnsTo": ["id"], "onDelete": "restrict", "onUpdate": "no action" }
+      }, "compositePrimaryKeys": {}, "uniqueConstraints": {}, "policies": {}, "checkConstraints": {}, "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.rent_invoice_status": { "name": "rent_invoice_status", "schema": "public", "values": ["DRAFT", "ISSUED", "CANCELLED"] },
+    "public.rent_payment_method": { "name": "rent_payment_method", "schema": "public", "values": ["BANK_TRANSFER", "CASH", "OTHER"] }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": { "columns": {}, "schemas": {}, "tables": {} }
+}

@@ -8,14 +8,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { SanitizedHtml } from "@/components/ui/sanitized-html"
 import type { AssetMaintenanceDetail } from "@/data/maintenance"
 import { cn } from "@/lib/utils"
 import {
+  Banknote,
   Building2,
   CalendarDays,
   Check,
   Clock3,
-  DollarSign,
+  Cpu,
+  FileText,
   History,
   MapPin,
   Package,
@@ -60,9 +63,7 @@ function initials(name: string) {
 function InfoItem({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="min-w-0 rounded-lg border bg-muted/20 p-3">
-      <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        {label}
-      </dt>
+      <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
       <dd className="mt-1 font-medium break-words">{value}</dd>
     </div>
   )
@@ -102,9 +103,6 @@ function UserIdentity({
 type OverviewProps = Pick<AssetMaintenanceDetail, "asset" | "currentHolder">
 
 export function AssetOverviewCard({ asset, currentHolder }: OverviewProps) {
-  const showSensitiveFields =
-    asset.purchasePrice !== null || asset.status !== "-"
-
   return (
     <Card aria-labelledby="asset-overview-title">
       <CardHeader className="border-b">
@@ -114,42 +112,36 @@ export function AssetOverviewCard({ asset, currentHolder }: OverviewProps) {
           </div>
           <div>
             <CardTitle>
-              <h2 id="asset-overview-title">Informasi Asset</h2>
+              <h2 id="asset-overview-title">Kepemilikan Asset</h2>
             </CardTitle>
             <CardDescription>
-              Identitas, lokasi, dan pengguna saat ini.
+              Lokasi dan pengguna asset saat ini.
             </CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <dl className="grid gap-3 sm:grid-cols-2">
-          <InfoItem label="Nomor Asset" value={asset.assetNumber} />
-          <InfoItem label="Kategori" value={asset.categoryName} />
-          <InfoItem label="Kode Asset" value={asset.assetCodeName} />
-          <InfoItem label="Lokasi Outlet" value={asset.outletName} />
-          <InfoItem label="Kondisi" value={asset.condition ?? "-"} />
-          {showSensitiveFields && (
-            <>
-              <InfoItem label="Status" value={asset.status} />
-              <InfoItem
-                label="Harga Beli"
-                value={
-                  <span className="tabular-nums">
-                    {asset.purchasePrice != null
-                      ? priceFormatter.format(asset.purchasePrice)
-                      : "-"}
-                  </span>
-                }
-              />
-            </>
+          <InfoItem label="Lokasi outlet" value={asset.outletName} />
+          {asset.purchasePrice !== null && (
+            <InfoItem
+              label="Harga beli"
+              value={
+                <span className="tabular-nums">
+                  {priceFormatter.format(asset.purchasePrice)}
+                </span>
+              }
+            />
           )}
         </dl>
 
-        <div className="border-t pt-4">
-          <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Pengguna Asset Saat Ini
-          </p>
+        <section
+          className="border-t pt-4"
+          aria-labelledby="current-holder-title"
+        >
+          <h3 id="current-holder-title" className="mb-2 text-sm font-medium">
+            Pengguna asset saat ini
+          </h3>
           {currentHolder ? (
             <UserIdentity
               image={currentHolder.image}
@@ -161,7 +153,129 @@ export function AssetOverviewCard({ asset, currentHolder }: OverviewProps) {
               Asset belum diserahterimakan kepada pengguna.
             </EmptyState>
           )}
+        </section>
+      </CardContent>
+    </Card>
+  )
+}
+
+type SpecificationProps = Pick<
+  AssetMaintenanceDetail,
+  "asset" | "specifications" | "photos"
+>
+
+export function AssetSpecificationCard({
+  asset,
+  specifications,
+  photos,
+}: SpecificationProps) {
+  return (
+    <Card aria-labelledby="asset-specification-title">
+      <CardHeader className="border-b">
+        <div className="flex items-start gap-3">
+          <div className="rounded-lg bg-primary/10 p-2 text-primary">
+            <Cpu className="size-5" aria-hidden="true" />
+          </div>
+          <div>
+            <CardTitle>
+              <h2 id="asset-specification-title">Spesifikasi Asset</h2>
+            </CardTitle>
+            <CardDescription>
+              Identifikasi fisik dan rincian teknis asset.
+            </CardDescription>
+          </div>
         </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <h3 id="physical-id-title" className="mb-2 text-sm font-medium">
+            Identifikasi fisik
+          </h3>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <InfoItem label="Nomor seri" value={asset.serialNumber || "-"} />
+            <InfoItem label="Nomor aktiva" value={asset.aktiva || "-"} />
+            <InfoItem
+              label="QR Code"
+              value={
+                asset.qrCodePath ? (
+                  <a
+                    href={asset.qrCodePath}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-primary underline underline-offset-4 hover:text-primary/80"
+                  >
+                    Lihat QR
+                  </a>
+                ) : (
+                  "-"
+                )
+              }
+            />
+          </dl>
+        </div>
+
+        <section className="border-t pt-4" aria-labelledby="tech-spec-title">
+          <h3 id="tech-spec-title" className="mb-2 text-sm font-medium">
+            Spesifikasi teknis
+          </h3>
+          {specifications.length ? (
+            <dl className="grid gap-3 sm:grid-cols-2">
+              {specifications.map((spec) => (
+                <InfoItem
+                  key={spec.id}
+                  label={spec.name}
+                  value={spec.value || "-"}
+                />
+              ))}
+            </dl>
+          ) : (
+            <EmptyState>
+              Belum ada rincian spesifikasi teknis untuk asset ini.
+            </EmptyState>
+          )}
+        </section>
+
+        {photos.length > 0 && (
+          <section
+            className="border-t pt-4"
+            aria-labelledby="asset-photos-title"
+          >
+            <h3 id="asset-photos-title" className="mb-2 text-sm font-medium">
+              Foto asset ({photos.length})
+            </h3>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {photos.map((photo) => {
+                const isPdf = photo.path.toLowerCase().endsWith(".pdf")
+                return (
+                  <a
+                    key={photo.id}
+                    href={photo.path}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group relative flex flex-col overflow-hidden rounded-lg border bg-muted/20 transition-colors hover:border-primary/50"
+                  >
+                    {isPdf ? (
+                      <div className="flex aspect-video w-full items-center justify-center bg-muted text-muted-foreground">
+                        <FileText className="size-8" aria-hidden="true" />
+                      </div>
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={photo.path}
+                        alt={photo.name}
+                        className="aspect-video w-full object-cover transition-transform group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    )}
+                    <span className="truncate p-2 text-xs font-medium text-muted-foreground">
+                      {photo.name}
+                    </span>
+                  </a>
+                )
+              })}
+            </div>
+          </section>
+        )}
       </CardContent>
     </Card>
   )
@@ -257,6 +371,100 @@ export function AssetLeaseHistory({ leases }: LeaseHistoryProps) {
           </div>
         ) : (
           <EmptyState>Asset belum memiliki data sewa.</EmptyState>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+type BillingHistoryProps = Pick<AssetMaintenanceDetail, "billingHistory">
+
+export function AssetBillingHistory({ billingHistory }: BillingHistoryProps) {
+  const labels: Record<string, string> = {
+    ISSUED: "Issued",
+    OVERDUE: "Overdue",
+    PARTIALLY_PAID: "Partially paid",
+    PAID: "Paid",
+  }
+
+  return (
+    <Card aria-labelledby="asset-billing-title">
+      <CardHeader className="border-b">
+        <div className="flex items-start gap-3">
+          <div className="rounded-lg bg-primary/10 p-2 text-primary">
+            <Banknote className="size-5" aria-hidden="true" />
+          </div>
+          <div>
+            <CardTitle>
+              <h2 id="asset-billing-title">Riwayat Tagihan</h2>
+            </CardTitle>
+            <CardDescription>
+              Invoice sewa yang diterbitkan untuk asset ini (
+              {billingHistory.length}).
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {billingHistory.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[42rem] text-sm">
+              <thead className="border-b text-left text-muted-foreground">
+                <tr>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    No. Faktur
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    Klien
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    Periode
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-right font-medium">
+                    Sewa asset
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    Status
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    Pembayaran terakhir
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {billingHistory.map((invoice) => (
+                  <tr key={invoice.id}>
+                    <td className="px-3 py-2 font-medium tabular-nums">
+                      {invoice.invoiceNo ?? "-"}
+                    </td>
+                    <td className="px-3 py-2">{invoice.companyName}</td>
+                    <td className="px-3 py-2">
+                      {formatDate(invoice.periodStart)}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {priceFormatter.format(invoice.amount)}
+                    </td>
+                    <td className="px-3 py-2">
+                      <Badge
+                        variant={
+                          invoice.status === "OVERDUE"
+                            ? "destructive"
+                            : "secondary"
+                        }
+                      >
+                        {labels[invoice.status] ?? invoice.status}
+                      </Badge>
+                    </td>
+                    <td className="px-3 py-2">{formatDate(invoice.paidAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState>
+            Belum ada invoice yang diterbitkan untuk asset ini.
+          </EmptyState>
         )}
       </CardContent>
     </Card>
@@ -466,47 +674,40 @@ export function AssetMaintenanceSection({
                 Maintenance Terakhir
               </h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between gap-3 rounded-lg border bg-primary/5 p-3">
-                  <span className="flex items-center gap-2 text-sm font-medium">
-                    <DollarSign
-                      className="size-4 text-muted-foreground"
-                      aria-hidden="true"
-                    />
-                    Biaya
-                  </span>
-                  <span className="font-semibold text-primary tabular-nums">
-                    {priceFormatter.format(latest.amount)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 rounded-lg border p-3">
-                  <CalendarDays
-                    className="size-4 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  <div>
-                    <p className="text-xs text-muted-foreground">
+                <dl className="divide-y rounded-lg border">
+                  <div className="flex items-center justify-between gap-3 p-3">
+                    <dt className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Banknote className="size-4" aria-hidden="true" />
+                      Biaya
+                    </dt>
+                    <dd className="font-semibold tabular-nums">
+                      {priceFormatter.format(latest.amount)}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 p-3">
+                    <dt className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <CalendarDays className="size-4" aria-hidden="true" />
                       Tanggal dicatat
-                    </p>
-                    <p className="font-medium">
-                      {formatDate(latest.createdAt)}
-                    </p>
+                    </dt>
+                    <dd className="font-medium">
+                      <time dateTime={latest.createdAt.toISOString()}>
+                        {formatDate(latest.createdAt)}
+                      </time>
+                    </dd>
                   </div>
-                </div>
-                <div className="flex items-center gap-2 rounded-lg border p-3">
-                  <UserRound
-                    className="size-4 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  <div>
-                    <p className="text-xs text-muted-foreground">
+                  <div className="flex items-center justify-between gap-3 p-3">
+                    <dt className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <UserRound className="size-4" aria-hidden="true" />
                       Dicatat oleh
-                    </p>
-                    <p className="font-medium">{latest.creatorName ?? "-"}</p>
+                    </dt>
+                    <dd className="text-right font-medium">
+                      {latest.creatorName ?? "-"}
+                    </dd>
                   </div>
-                </div>
-                <div
+                </dl>
+                <SanitizedHtml
+                  html={latest.detail}
                   className="prose prose-sm dark:prose-invert max-w-none rounded-lg border p-4"
-                  dangerouslySetInnerHTML={{ __html: latest.detail }}
                 />
               </div>
             </section>
@@ -516,32 +717,42 @@ export function AssetMaintenanceSection({
                 Semua Catatan
               </h3>
               <div className="divide-y rounded-lg border px-4">
-                {maintenanceHistory.map((item, index) => (
-                  <article key={item.id} className="py-4 first:pt-4">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <time className="font-semibold">
-                            {formatDate(item.createdAt)}
-                          </time>
-                          {index === 0 && (
-                            <Badge variant="secondary">Terbaru</Badge>
-                          )}
+                {maintenanceHistory.map((item, index) => {
+                  const headingId = `maintenance-${item.id}`
+
+                  return (
+                    <article
+                      key={item.id}
+                      className="py-4 first:pt-4"
+                      aria-labelledby={headingId}
+                    >
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h4 id={headingId} className="font-semibold">
+                              <time dateTime={item.createdAt.toISOString()}>
+                                {formatDate(item.createdAt)}
+                              </time>
+                            </h4>
+                            {index === 0 && (
+                              <Badge variant="secondary">Terbaru</Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Oleh {item.creatorName ?? "-"}
+                          </p>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          Oleh {item.creatorName ?? "-"}
-                        </p>
+                        <span className="font-semibold tabular-nums">
+                          {priceFormatter.format(item.amount)}
+                        </span>
                       </div>
-                      <span className="font-semibold tabular-nums">
-                        {priceFormatter.format(item.amount)}
-                      </span>
-                    </div>
-                    <div
-                      className="prose prose-sm dark:prose-invert mt-3 max-w-none text-muted-foreground"
-                      dangerouslySetInnerHTML={{ __html: item.detail }}
-                    />
-                  </article>
-                ))}
+                      <SanitizedHtml
+                        html={item.detail}
+                        className="prose prose-sm dark:prose-invert mt-3 max-w-none"
+                      />
+                    </article>
+                  )
+                })}
               </div>
             </section>
           </div>

@@ -7,6 +7,7 @@ import { getSearchParam, type SearchParamValue } from "@/lib/helper"
 import Link from "next/link"
 import { Suspense } from "react"
 import { columns } from "./column"
+import { requireUser } from "@/data/require-user"
 
 const RenderTable = async ({
   currentPage,
@@ -31,6 +32,7 @@ export default async function AssetLeasePage({
     q?: SearchParamValue
   }>
 }) {
+  const user = await requireUser()
   const params = await searchParams
   const currentPage = Number(getSearchParam(params.page) ?? 1)
   const size = Number(getSearchParam(params.size) ?? 10)

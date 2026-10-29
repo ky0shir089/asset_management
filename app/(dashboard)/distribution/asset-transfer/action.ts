@@ -20,7 +20,7 @@ import {
 } from "@/lib/formSchemas/asset-transfer-schema"
 import { and, asc, desc, eq, inArray, ne } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
-import { z } from "zod"
+import { integerIdStringSchema } from "@/lib/formSchemas/id-schema"
 
 class AssetTransferWorkflowError extends Error {}
 
@@ -29,7 +29,7 @@ export async function getStandaloneTransferOptions(companyId: string) {
   const permission = await authorizeAction("asset-transfer:create")
   if (!permission.authorized) return permission.response
 
-  if (!z.uuid().safeParse(companyId).success) {
+  if (!integerIdStringSchema.safeParse(companyId).success) {
     return { success: false as const, message: "Invalid company" }
   }
 
@@ -155,7 +155,10 @@ export async function getStandaloneTransferOptions(companyId: string) {
     }
   } catch (error) {
     console.error("Failed to load standalone transfer options", error)
-    return { success: false as const, message: "Failed to load transfer options" }
+    return {
+      success: false as const,
+      message: "Failed to load transfer options",
+    }
   }
 }
 

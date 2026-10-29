@@ -5,26 +5,31 @@ import {
   assetCategories,
   assetCodes,
   assetDatas,
+  assetSpecs,
   assetTransfers,
   companies,
   maintenances,
   outlets,
+  photoAssets,
   poDetails,
   prDetails,
+  prSpecifications,
   rentAssetDetails,
   rentAssets,
+  rentInvoiceItems,
+  rentInvoices,
   users,
 } from "@/drizzle/schema"
 import { requirePermission } from "@/lib/auth/permission"
 import { isSuperAdmin } from "@/lib/auth/permission-query"
 import { requireUser } from "./require-user"
-import { and, desc, eq } from "drizzle-orm"
+import { and, asc, desc, eq, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { notFound } from "next/navigation"
-import { z } from "zod"
+import { integerIdStringSchema } from "@/lib/formSchemas/id-schema"
 
 export async function getAssetMaintenanceDetail(assetId: string) {
-  if (!z.string().uuid().safeParse(assetId).success) {
+  if (!integerIdStringSchema.safeParse(assetId).success) {
     notFound()
   }
 
@@ -35,6 +40,9 @@ export async function getAssetMaintenanceDetail(assetId: string) {
     .select({
       id: assetDatas.id,
       assetNumber: assetDatas.nomorAssets,
+      serialNumber: assetDatas.serialNumber,
+      aktiva: assetDatas.aktiva,
+      qrCodePath: assetDatas.qrCodePath,
       status: assetDatas.status,
       condition: assetDatas.condition,
       categoryName: assetCategories.name,
@@ -43,6 +51,7 @@ export async function getAssetMaintenanceDetail(assetId: string) {
       outletName: outlets.name,
       purchasePrice: poDetails.price,
       createdBy: assetDatas.createdBy,
+      prDetailId: prDetails.id,
     })
     .from(assetDatas)
     .innerJoin(poDetails, eq(assetDatas.poDetailId, poDetails.id))
@@ -97,7 +106,14 @@ export async function getAssetMaintenanceDetail(assetId: string) {
   }
 
   const confirmingUsers = alias(users, "confirming_users")
-  const [leases, transferHistory, maintenanceHistory] = await Promise.all([
+  const [
+    leases,
+    transferHistory,
+    maintenanceHistory,
+    specifications,
+    photos,
+    billingHistory,
+  ] = await Promise.all([
     db
       .select({
         id: rentAssetDetails.id,
@@ -167,17 +183,78 @@ export async function getAssetMaintenanceDetail(assetId: string) {
       .leftJoin(users, eq(maintenances.createdBy, users.id))
       .where(eq(maintenances.assetId, asset.id))
       .orderBy(desc(maintenances.createdAt), desc(maintenances.id)),
+    db
+      .select({
+        id: prSpecifications.id,
+        name: assetSpecs.name,
+        value: prSpecifications.specValue,
+      })
+      .from(prSpecifications)
+      .innerJoin(assetSpecs, eq(prSpecifications.specId, assetSpecs.id))
+      .where(eq(prSpecifications.prDtlId, asset.prDetailId))
+      .orderBy(asc(assetSpecs.name), asc(prSpecifications.id)),
+    db
+      .select({
+        id: photoAssets.id,
+        name: photoAssets.name,
+        path: photoAssets.path,
+      })
+      .from(photoAssets)
+      .where(eq(photoAssets.receiveId, asset.id))
+      .orderBy(asc(photoAssets.createdAt), asc(photoAssets.id)),
+    db
+      .select({
+        id: rentInvoiceItems.id,
+        invoiceId: rentInvoices.id,
+        invoiceNo: rentInvoices.invoiceNo,
+        companyName: rentInvoices.companyName,
+        periodStart: rentInvoices.periodStart,
+        dueDate: rentInvoices.dueDate,
+        total: rentInvoices.total,
+        status: rentInvoices.status,
+        amount: rentInvoiceItems.amount,
+        paidAt: sql<
+          string | null
+        >`(select max(p.paid_at) from rent_invoice_payments p where p.invoice_id = ${rentInvoices.id})`,
+        paidAmount:
+          sql<number>`coalesce((select sum(p.amount) from rent_invoice_payments p where p.invoice_id = ${rentInvoices.id}), 0)`.mapWith(
+            Number
+          ),
+      })
+      .from(rentInvoiceItems)
+      .innerJoin(rentInvoices, eq(rentInvoiceItems.invoiceId, rentInvoices.id))
+      .where(
+        and(
+          eq(rentInvoiceItems.assetId, asset.id),
+          eq(rentInvoices.status, "ISSUED")
+        )
+      )
+      .orderBy(desc(rentInvoices.periodStart), desc(rentInvoices.id)),
   ])
 
   return {
     asset,
     currentHolder,
+    specifications,
+    photos,
     leases: leases.map((lease) => ({
       ...lease,
       amount: isFullAccess ? lease.amount : null,
     })),
     transferHistory,
     maintenanceHistory,
+    billingHistory: billingHistory.map((invoice) => ({
+      ...invoice,
+      status:
+        invoice.status === "ISSUED" && invoice.paidAmount >= invoice.total
+          ? "PAID"
+          : invoice.status === "ISSUED" && invoice.paidAmount > 0
+            ? "PARTIALLY_PAID"
+            : invoice.status === "ISSUED" &&
+                invoice.dueDate < new Date().toISOString().slice(0, 10)
+              ? "OVERDUE"
+              : invoice.status,
+    })),
   }
 }
 

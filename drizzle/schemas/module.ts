@@ -1,9 +1,9 @@
+import { serialId } from "../id"
 import {
   pgTable,
   smallint,
   text,
   timestamp,
-  uuid,
   varchar,
 } from "drizzle-orm/pg-core"
 import { users } from "./auth-schema"
@@ -11,7 +11,7 @@ import { relations } from "drizzle-orm"
 import { menus } from "./menu"
 
 export const modules = pgTable("modules", {
-  id: uuid("id").defaultRandom().primaryKey(),
+  id: serialId("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   icon: varchar("icon", { length: 255 }).notNull(),
   position: smallint("position").notNull().default(0),

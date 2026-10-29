@@ -12,7 +12,12 @@ function LoadingSwap({
   className?: string
 }) {
   return (
-    <span className={cn("inline-flex items-center justify-center gap-1.5", className)}>
+    <span
+      className={cn(
+        "inline-flex items-center justify-center gap-1.5",
+        className
+      )}
+    >
       {isLoading && (
         <LoaderCircle
           className="size-4 animate-spin"

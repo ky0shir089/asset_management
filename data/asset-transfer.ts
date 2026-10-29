@@ -15,16 +15,8 @@ import {
 import { requirePermission } from "@/lib/auth/permission"
 import { isSuperAdmin } from "@/lib/auth/permission-query"
 import { paginatedResponse, paginationParams } from "@/lib/helper"
-import {
-  and,
-  count,
-  desc,
-  eq,
-  ilike,
-  isNull,
-  or,
-  type SQL,
-} from "drizzle-orm"
+import { integerIdStringSchema } from "@/lib/formSchemas/id-schema"
+import { and, count, desc, eq, ilike, isNull, or, type SQL } from "drizzle-orm"
 import { requireUser } from "./require-user"
 import { notFound } from "next/navigation"
 
@@ -80,10 +72,7 @@ export async function assetTransferIndex(
       .innerJoin(assetCodes, eq(prDetails.assetCodeId, assetCodes.id))
       .innerJoin(outlets, eq(assetTransfers.outletId, outlets.id))
       .innerJoin(branches, eq(outlets.branchId, branches.branchId))
-      .innerJoin(
-        companies,
-        eq(branches.companyId, companies.talentaCompanyId)
-      )
+      .innerJoin(companies, eq(branches.companyId, companies.talentaCompanyId))
       .innerJoin(users, eq(assetTransfers.userId, users.id))
       .where(where)
       .orderBy(desc(assetTransfers.createdAt))
@@ -98,10 +87,7 @@ export async function assetTransferIndex(
       .innerJoin(assetCodes, eq(prDetails.assetCodeId, assetCodes.id))
       .innerJoin(outlets, eq(assetTransfers.outletId, outlets.id))
       .innerJoin(branches, eq(outlets.branchId, branches.branchId))
-      .innerJoin(
-        companies,
-        eq(branches.companyId, companies.talentaCompanyId)
-      )
+      .innerJoin(companies, eq(branches.companyId, companies.talentaCompanyId))
       .innerJoin(users, eq(assetTransfers.userId, users.id))
       .where(where),
   ])
@@ -117,11 +103,7 @@ export async function assetTransferShow(id: string) {
   const user = await requireUser()
   await requirePermission("asset-transfer:read")
 
-  if (
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      id
-    )
-  ) {
+  if (!integerIdStringSchema.safeParse(id).success) {
     notFound()
   }
 

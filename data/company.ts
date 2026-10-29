@@ -48,5 +48,7 @@ export async function companyShow(id: string) {
   return data
 }
 
-export type companyIndexType = Awaited<ReturnType<typeof companyIndex>>["data"][0]
+export type companyIndexType = Awaited<
+  ReturnType<typeof companyIndex>
+>["data"][0]
 export type companyShowType = Awaited<ReturnType<typeof companyShow>>

@@ -13,7 +13,7 @@ import {
   users,
 } from "@/drizzle/schema"
 import { isSuperAdmin } from "@/lib/auth/permission-query"
-import { and, asc, eq } from "drizzle-orm"
+import { and, asc, eq, or } from "drizzle-orm"
 import { requireUser } from "./require-user"
 
 export async function assetTransferReceiptQueue() {
@@ -45,7 +45,9 @@ export async function assetTransferReceiptQueue() {
     .where(
       and(
         eq(assetTransfers.status, "PENDING"),
-        superAdmin ? undefined : eq(assetTransfers.userId, user.id)
+        superAdmin || user.role === "Admin GA"
+          ? undefined
+          : eq(assetTransfers.userId, user.id)
       )
     )
     .orderBy(asc(assetTransfers.transferDate), asc(assetTransfers.createdAt))

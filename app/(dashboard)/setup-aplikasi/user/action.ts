@@ -1,11 +1,12 @@
 "use server"
 
 import { db } from "@/drizzle/db"
-import { roleUser, users } from "@/drizzle/schema"
+import { accounts, roleUser, sessions, users } from "@/drizzle/schema"
 import { requireUser } from "@/data/require-user"
 import { authorizeAction } from "@/lib/auth/permission"
 import { userSchema, userSchemaType } from "@/lib/formSchemas/user-schema"
-import { eq } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
+import { hashPassword } from "better-auth/crypto"
 
 export async function userUpdate(id: string, values: userSchemaType) {
   const user = await requireUser()
@@ -37,6 +38,21 @@ export async function userUpdate(id: string, values: userSchemaType) {
 
       if (!updatedUser) {
         return null
+      }
+
+      if (validation.data.changePassword) {
+        const hashedPassword = await hashPassword("12345678")
+
+        await tx
+          .update(accounts)
+          .set({
+            password: hashedPassword,
+          })
+          .where(
+            and(eq(accounts.userId, id), eq(accounts.providerId, "credential"))
+          )
+
+        await tx.delete(sessions).where(eq(sessions.userId, id))
       }
 
       await tx

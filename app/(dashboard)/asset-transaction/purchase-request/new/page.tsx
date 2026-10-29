@@ -36,9 +36,7 @@ export default function PurchaseRequestNewPage() {
     <Card>
       <CardHeader className="flex flex-row items-center gap-4">
         <BackButton href="/asset-transaction/purchase-request" />
-        <CardTitle className="text-2xl">
-          Create Purchase Request
-        </CardTitle>
+        <CardTitle className="text-2xl">Create Purchase Request</CardTitle>
       </CardHeader>
 
       <CardContent>

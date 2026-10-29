@@ -18,22 +18,23 @@ interface AssetItemFieldsSectionProps {
   selectedPoDetailId: string
   photoGroups: PhotoGroup[]
   serialNumbers: string[]
+  aktivas?: string[]
   maxPhotoFileSizeMb: number
   hasSelectedPoDetail: boolean
   onSerialNumberChange: (index: number, value: string) => void
-  onFileChange: (
-    index: number,
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => void
+  onAktivaChange?: (index: number, value: string) => void
+  onFileChange: (index: number, e: React.ChangeEvent<HTMLInputElement>) => void
 }
 
 export function AssetItemFieldsSection({
   selectedPoDetailId,
   photoGroups,
   serialNumbers,
+  aktivas = [],
   maxPhotoFileSizeMb,
   hasSelectedPoDetail,
   onSerialNumberChange,
+  onAktivaChange,
   onFileChange,
 }: AssetItemFieldsSectionProps) {
   return (
@@ -44,27 +45,45 @@ export function AssetItemFieldsSection({
           {photoGroups.map((group, groupIndex) => (
             <div
               key={`${selectedPoDetailId}-${groupIndex}`}
-              className="rounded-md border p-3 flex flex-col gap-4"
+              className="flex flex-col gap-4 rounded-md border p-3"
             >
-              <h4 className="font-medium text-sm text-muted-foreground">
+              <h4 className="text-sm font-medium text-muted-foreground">
                 Asset {groupIndex + 1}
               </h4>
 
-              <Field>
-                <FieldLabel htmlFor={`serialNumber-${groupIndex}`}>
-                  Serial Number
-                </FieldLabel>
-                <Input
-                  id={`serialNumber-${groupIndex}`}
-                  name={`serialNumber-${groupIndex}`}
-                  type="text"
-                  placeholder="Enter serial number (optional)"
-                  value={serialNumbers[groupIndex] ?? ""}
-                  onChange={(e) =>
-                    onSerialNumberChange(groupIndex, e.target.value)
-                  }
-                />
-              </Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel htmlFor={`serialNumber-${groupIndex}`}>
+                    Serial Number
+                  </FieldLabel>
+                  <Input
+                    id={`serialNumber-${groupIndex}`}
+                    name={`serialNumber-${groupIndex}`}
+                    type="text"
+                    placeholder="Enter serial number (optional)"
+                    value={serialNumbers[groupIndex] ?? ""}
+                    onChange={(e) =>
+                      onSerialNumberChange(groupIndex, e.target.value)
+                    }
+                  />
+                </Field>
+
+                <Field>
+                  <FieldLabel htmlFor={`aktiva-${groupIndex}`}>
+                    Aktiva
+                  </FieldLabel>
+                  <Input
+                    id={`aktiva-${groupIndex}`}
+                    name={`aktiva-${groupIndex}`}
+                    type="text"
+                    placeholder="Enter aktiva (optional)"
+                    value={aktivas[groupIndex] ?? ""}
+                    onChange={(e) =>
+                      onAktivaChange?.(groupIndex, e.target.value)
+                    }
+                  />
+                </Field>
+              </div>
 
               <Field>
                 <FieldLabel htmlFor={`photos-${groupIndex}`}>

@@ -7,11 +7,11 @@ import {
   text,
   timestamp,
   uniqueIndex,
-  uuid,
   varchar,
 } from "drizzle-orm/pg-core"
 import { users } from "./auth-schema"
 import { relations } from "drizzle-orm"
+import { integerId, serialId } from "../id"
 import { companies, outlets } from "./network"
 import {
   assetCategories,
@@ -24,20 +24,22 @@ import {
 export const purchaseRequests = pgTable(
   "purchase_requests",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: serialId("id").primaryKey(),
     date: date("date").notNull(),
     prNo: varchar("pr_no", { length: 255 }).notNull(),
-    companyId: uuid("company_id")
+    companyId: integerId("company_id")
       .notNull()
       .references(() => companies.id, { onDelete: "cascade" }),
-    assetCategoryId: uuid("asset_category_id")
+    assetCategoryId: integerId("asset_category_id")
       .notNull()
       .references(() => assetCategories.id, { onDelete: "cascade" }),
     description: varchar("description", { length: 255 }),
     totalQuantity: integer("total_quantity").default(0),
     totalAmount: integer("total_amount").default(0),
     status: varchar("status", { length: 255 }).notNull().default("REQUEST"),
-    poStatus: varchar("po_status", { length: 255 }).notNull().default("PENDING"),
+    poStatus: varchar("po_status", { length: 255 })
+      .notNull()
+      .default("PENDING"),
     reason: varchar("reason", { length: 255 }),
     createdBy: text("created_by")
       .notNull()
@@ -52,11 +54,11 @@ export const purchaseRequests = pgTable(
 )
 
 export const prDetails = pgTable("pr_details", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  prId: uuid("pr_id")
+  id: serialId("id").primaryKey(),
+  prId: integerId("pr_id")
     .notNull()
     .references(() => purchaseRequests.id, { onDelete: "cascade" }),
-  assetCodeId: uuid("asset_code_id")
+  assetCodeId: integerId("asset_code_id")
     .notNull()
     .references(() => assetCodes.id, { onDelete: "cascade" }),
   price: integer("price").default(0),
@@ -73,11 +75,11 @@ export const prDetails = pgTable("pr_details", {
 })
 
 export const prSpecifications = pgTable("pr_specifications", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  prDtlId: uuid("pr_dtl_id")
+  id: serialId("id").primaryKey(),
+  prDtlId: integerId("pr_dtl_id")
     .notNull()
     .references(() => prDetails.id, { onDelete: "cascade" }),
-  specId: uuid("spec_id")
+  specId: integerId("spec_id")
     .notNull()
     .references(() => assetSpecs.id, { onDelete: "cascade" }),
   specValue: varchar("spec_value", { length: 255 }),
@@ -94,16 +96,16 @@ export const prSpecifications = pgTable("pr_specifications", {
 export const purchaseOrders = pgTable(
   "purchase_orders",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: serialId("id").primaryKey(),
     date: date("date").notNull(),
     poNo: varchar("po_no", { length: 255 }).notNull(),
-    prId: uuid("pr_id")
+    prId: integerId("pr_id")
       .notNull()
       .references(() => purchaseRequests.id, { onDelete: "cascade" }),
-    supplierId: uuid("supplier_id")
+    supplierId: integerId("supplier_id")
       .notNull()
       .references(() => suppliers.id, { onDelete: "cascade" }),
-    supplierAccountId: uuid("supplier_account_id").references(
+    supplierAccountId: integerId("supplier_account_id").references(
       () => supplierAccounts.id,
       { onDelete: "set null" }
     ),
@@ -112,6 +114,8 @@ export const purchaseOrders = pgTable(
     totalQuantity: integer("total_quantity").default(0),
     totalAmount: integer("total_amount").default(0),
     totalCost: integer("total_cost").default(0),
+    pvNo: varchar("pv_no", { length: 255 }),
+    attachment: varchar("attachment", { length: 255 }),
     status: varchar("status", { length: 255 }).notNull().default("NEW"),
     createdBy: text("created_by")
       .notNull()
@@ -126,11 +130,11 @@ export const purchaseOrders = pgTable(
 )
 
 export const poDetails = pgTable("po_details", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  poId: uuid("po_id")
+  id: serialId("id").primaryKey(),
+  poId: integerId("po_id")
     .notNull()
     .references(() => purchaseOrders.id, { onDelete: "cascade" }),
-  prDtlId: uuid("pr_dtl_id")
+  prDtlId: integerId("pr_dtl_id")
     .notNull()
     .references(() => prDetails.id, { onDelete: "cascade" }),
   quantity: integer("quantity").default(0),
@@ -156,11 +160,11 @@ export const conditionEnum = pgEnum("condition", [
 export const assetDatas = pgTable(
   "asset_datas",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
-    poDetailId: uuid("po_detail_id")
+    id: serialId("id").primaryKey(),
+    poDetailId: integerId("po_detail_id")
       .notNull()
       .references(() => poDetails.id, { onDelete: "restrict" }),
-    outletId: uuid("outlet_id")
+    outletId: integerId("outlet_id")
       .notNull()
       .references(() => outlets.id, { onDelete: "cascade" }),
     condition: conditionEnum(),
@@ -168,6 +172,7 @@ export const assetDatas = pgTable(
     nomorAssets: varchar("nomor_assets", { length: 255 }).notNull(),
     qrCodePath: varchar("qr_code_path", { length: 255 }),
     serialNumber: varchar("serial_number", { length: 255 }),
+    aktiva: varchar("aktiva", { length: 255 }),
     createdBy: text("created_by")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -186,8 +191,8 @@ export const assetDatas = pgTable(
 export const photoAssets = pgTable(
   "photo_assets",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
-    receiveId: uuid("receive_id")
+    id: serialId("id").primaryKey(),
+    receiveId: integerId("receive_id")
       .notNull()
       .references(() => assetDatas.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 255 }).notNull(),
@@ -295,25 +300,22 @@ export const poDetailsRelations = relations(poDetails, ({ one, many }) => ({
   receivedAssets: many(assetDatas),
 }))
 
-export const assetDatasRelations = relations(
-  assetDatas,
-  ({ one, many }) => ({
-    poDetail: one(poDetails, {
-      fields: [assetDatas.poDetailId],
-      references: [poDetails.id],
-    }),
-    outlet: one(outlets, {
-      fields: [assetDatas.outletId],
-      references: [outlets.id],
-    }),
-    creator: one(users, {
-      fields: [assetDatas.createdBy],
-      references: [users.id],
-      relationName: "receiveAssetCreator",
-    }),
-    photos: many(photoAssets),
-  })
-)
+export const assetDatasRelations = relations(assetDatas, ({ one, many }) => ({
+  poDetail: one(poDetails, {
+    fields: [assetDatas.poDetailId],
+    references: [poDetails.id],
+  }),
+  outlet: one(outlets, {
+    fields: [assetDatas.outletId],
+    references: [outlets.id],
+  }),
+  creator: one(users, {
+    fields: [assetDatas.createdBy],
+    references: [users.id],
+    relationName: "receiveAssetCreator",
+  }),
+  photos: many(photoAssets),
+}))
 
 export const photoAssetsRelations = relations(photoAssets, ({ one }) => ({
   receiveAsset: one(assetDatas, {

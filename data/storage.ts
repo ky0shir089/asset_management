@@ -48,5 +48,7 @@ export async function storageShow(id: string) {
   return data
 }
 
-export type storageIndexType = Awaited<ReturnType<typeof storageIndex>>["data"][0]
+export type storageIndexType = Awaited<
+  ReturnType<typeof storageIndex>
+>["data"][0]
 export type storageShowType = Awaited<ReturnType<typeof storageShow>>

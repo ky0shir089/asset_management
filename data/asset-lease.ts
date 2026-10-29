@@ -25,7 +25,7 @@ import {
 } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { notFound } from "next/navigation"
-import { z } from "zod"
+import { integerIdStringSchema } from "@/lib/formSchemas/id-schema"
 import { requireUser } from "./require-user"
 
 export async function assetLeaseIndex(
@@ -84,7 +84,7 @@ export async function assetLeaseIndex(
 }
 
 export async function assetLeaseShow(rentId: string) {
-  if (!z.uuid().safeParse(rentId).success) {
+  if (!integerIdStringSchema.safeParse(rentId).success) {
     notFound()
   }
 
@@ -151,6 +151,7 @@ export async function assetLeaseShow(rentId: string) {
   const visible =
     superAdmin ||
     data.createdBy === user.id ||
+    user.role === "Admin GA" ||
     (canUpdate && data.status === "NEW")
   if (!visible) notFound()
 

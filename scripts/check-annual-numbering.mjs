@@ -33,7 +33,13 @@ function loadGenerator(path, names, received = false) {
         const start = node.statements.findIndex((statement) => variable(statement, "now"))
         const end = node.statements.findIndex((statement) => variable(statement, "assetsToCreate"))
         if (start >= 0 && end >= start) {
-          allocation = node.statements.slice(start, end + 1).map((statement) => statement.getText(file)).join("\n")
+          const allocationStatement = node.statements[end].getText(file)
+            .replace(/,\s*serialNumber:[\s\S]*?\?\? null/, "")
+            .replace(/,\s*aktiva:[\s\S]*?\?\? null/, "")
+          allocation = [
+            ...node.statements.slice(start, end).map((statement) => statement.getText(file)),
+            allocationStatement,
+          ].join("\n")
         }
       }
       ts.forEachChild(node, visit)

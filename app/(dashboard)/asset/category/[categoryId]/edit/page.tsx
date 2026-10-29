@@ -1,10 +1,5 @@
 import { BackButton } from "@/components/back-button"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { assetCategoryShow } from "@/data/asset-category"
 import { Suspense } from "react"
 import FormSkeleton from "@/components/form-skeleton"

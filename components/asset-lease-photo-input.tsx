@@ -180,7 +180,7 @@ export default function AssetLeasePhotoInput({
                 {preview.isPdf ? (
                   <div className="flex size-28 flex-col items-center justify-center rounded-md border bg-muted/40 p-2 text-center">
                     <FileText className="size-8 text-muted-foreground" />
-                    <span className="mt-1 line-clamp-2 max-w-full text-xs text-muted-foreground break-all">
+                    <span className="mt-1 line-clamp-2 max-w-full text-xs break-all text-muted-foreground">
                       {preview.name}
                     </span>
                   </div>
@@ -199,7 +199,7 @@ export default function AssetLeasePhotoInput({
                 type="button"
                 onClick={() => onChange(files.filter((_, i) => i !== index))}
                 disabled={disabled}
-                className="absolute -top-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                className="text-destructive-foreground absolute -top-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full bg-destructive sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                 aria-label={`Remove ${preview.name}`}
               >
                 <X className="size-3" />

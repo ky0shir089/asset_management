@@ -14,15 +14,12 @@ const RenderForm = async () => {
     outletOptions(),
   ])
 
-  // Filter to PO details with remaining quantity > 0
-  const availablePoDetails = poDetails.filter((d) => d.remainingQuantity > 0)
-
-  return (
-    <ReceivedAssetForm
-      poDetails={availablePoDetails}
-      outlets={outlets}
-    />
+  // Filter to PO details with remaining quantity and PV number
+  const availablePoDetails = poDetails.filter(
+    (d) => d.remainingQuantity > 0 && d.pvNo?.trim()
   )
+
+  return <ReceivedAssetForm poDetails={availablePoDetails} outlets={outlets} />
 }
 
 export default function ReceivedAssetNewPage() {

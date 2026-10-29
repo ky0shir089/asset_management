@@ -44,7 +44,10 @@ export default async function PurchaseOrderPage({
       <div className="mb-4 flex items-center justify-between">
         <h2 className="mb-4 text-3xl font-bold">Purchase Order</h2>
 
-        <Link href="/asset-transaction/purchase-order/new" className={buttonVariants()}>
+        <Link
+          href="/asset-transaction/purchase-order/new"
+          className={buttonVariants()}
+        >
           Add New
         </Link>
       </div>

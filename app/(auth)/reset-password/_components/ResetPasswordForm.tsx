@@ -11,7 +11,10 @@ import {
 } from "@/components/ui/card"
 import { LoadingSwap } from "@/components/ui/loading-swap"
 import { PasswordInput } from "@/components/ui/password-input"
-import { resetPasswordSchema, resetPasswordSchemaType } from "@/lib/formSchemas/auth-schema"
+import {
+  resetPasswordSchema,
+  resetPasswordSchemaType,
+} from "@/lib/formSchemas/auth-schema"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
 import { useTransition } from "react"

@@ -72,5 +72,7 @@ export async function supplierShow(id: string) {
   return data
 }
 
-export type supplierIndexType = Awaited<ReturnType<typeof supplierIndex>>["data"][0]
+export type supplierIndexType = Awaited<
+  ReturnType<typeof supplierIndex>
+>["data"][0]
 export type supplierShowType = Awaited<ReturnType<typeof supplierShow>>

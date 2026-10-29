@@ -9,7 +9,10 @@ import {
   companies,
   prDetails,
   prSpecifications,
+  processors,
   purchaseRequests,
+  rams,
+  storages,
   suppliers,
 } from "@/drizzle/schema"
 import { authorizeAction } from "@/lib/auth/permission"
@@ -18,6 +21,15 @@ import {
   purchaseRequestSchemaType,
 } from "@/lib/formSchemas/purchase-request-schema"
 import { and, eq, ilike, inArray, isNotNull, ne, sql } from "drizzle-orm"
+
+const createableSpecTables = new Set([
+  "asset_brands",
+  "banks",
+  "processors",
+  "rams",
+  "storages",
+  "suppliers",
+])
 
 function isSafeIdentifier(value: string) {
   return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)
@@ -81,12 +93,13 @@ async function generatePurchaseRequestNumber(
 
   const [{ lastSequence }] = await tx
     .select({
-      lastSequence: sql`coalesce(max(substring(${purchaseRequests.prNo} from '/([0-9]+)$')::numeric), 0)`.mapWith(Number),
+      lastSequence:
+        sql`coalesce(max(substring(${purchaseRequests.prNo} from '/([0-9]+)$')::numeric), 0)`.mapWith(
+          Number
+        ),
     })
     .from(purchaseRequests)
-    .where(
-      ilike(purchaseRequests.prNo, yearScope),
-    )
+    .where(ilike(purchaseRequests.prNo, yearScope))
 
   const sequence = String(lastSequence + 1).padStart(3, "0")
 
@@ -121,7 +134,8 @@ async function getAllowedSelectValues(spec: {
           `select distinct "name" from "public"."${spec.dataTable}" where "name" is not null and "name" <> ''`
         )
       )
-      const rows = (result as unknown as { rows?: { name: string }[] }).rows ?? []
+      const rows =
+        (result as unknown as { rows?: { name: string }[] }).rows ?? []
 
       for (const row of rows) {
         values.add(row.name.toLowerCase())
@@ -158,6 +172,39 @@ async function insertCreateableSpecValues(
 
       if (!existing) {
         await tx.insert(banks).values({
+          name: value.value,
+          createdBy: userId,
+        })
+      }
+    } else if (value.dataTable === "processors") {
+      const existing = await tx.query.processors.findFirst({
+        where: sql`lower(name) = ${value.value.toLowerCase()}`,
+      })
+
+      if (!existing) {
+        await tx.insert(processors).values({
+          name: value.value,
+          createdBy: userId,
+        })
+      }
+    } else if (value.dataTable === "rams") {
+      const existing = await tx.query.rams.findFirst({
+        where: sql`lower(name) = ${value.value.toLowerCase()}`,
+      })
+
+      if (!existing) {
+        await tx.insert(rams).values({
+          name: value.value,
+          createdBy: userId,
+        })
+      }
+    } else if (value.dataTable === "storages") {
+      const existing = await tx.query.storages.findFirst({
+        where: sql`lower(name) = ${value.value.toLowerCase()}`,
+      })
+
+      if (!existing) {
+        await tx.insert(storages).values({
           name: value.value,
           createdBy: userId,
         })
@@ -251,22 +298,30 @@ async function validateDetailSpecifications(
       if (specMeta.type === "SELECT" && specValue) {
         const allowedValues = await getAllowedSelectValues(specMeta)
 
-        if (!allowedValues.has(specValue.toLowerCase())) {
-          if (!specMeta.createable) {
+        if (!allowedValues.has(specValue.toLowerCase()) && !specMeta.createable) {
+          return {
+            success: false,
+            message: "Specification value is not allowed",
+            newSpecValuesToInsert: [],
+          }
+        }
+
+        if (specMeta.createable) {
+          if (
+            !specMeta.dataTable ||
+            !createableSpecTables.has(specMeta.dataTable)
+          ) {
             return {
               success: false,
-              message: "Specification value is not allowed",
+              message: "Createable specification has no supported data table",
               newSpecValuesToInsert: [],
             }
           }
 
-          if (specMeta.dataTable) {
-            newSpecValuesToInsert.push({
-              dataTable: specMeta.dataTable,
-              value: specValue,
-            })
-            allowedValues.add(specValue.toLowerCase())
-          }
+          newSpecValuesToInsert.push({
+            dataTable: specMeta.dataTable,
+            value: specValue,
+          })
         }
       }
     }
@@ -415,8 +470,7 @@ export async function purchaseRequestUpdate(
     if (existing.status !== "REQUEST") {
       return {
         success: false,
-        message:
-          "Only purchase requests with status 'REQUEST' can be updated.",
+        message: "Only purchase requests with status 'REQUEST' can be updated.",
       }
     }
 

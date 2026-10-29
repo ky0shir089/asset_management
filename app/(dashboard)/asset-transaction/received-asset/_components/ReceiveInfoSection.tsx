@@ -124,7 +124,9 @@ export function ReceiveInfoSection({
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="receivedQuantity">Received Quantity</FieldLabel>
+            <FieldLabel htmlFor="receivedQuantity">
+              Received Quantity
+            </FieldLabel>
             <Input
               id="receivedQuantity"
               name="receivedQuantity"

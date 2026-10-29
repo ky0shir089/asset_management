@@ -56,7 +56,7 @@ export default function SearchBox() {
   }, [value, pathname, replace, searchParams, currentQ, currentPage])
 
   return (
-    <div className="flex flex-col w-full">
+    <div className="flex w-full flex-col">
       <Input
         value={value}
         onChange={(e) => setValue(e.target.value)}

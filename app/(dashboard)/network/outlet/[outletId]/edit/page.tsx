@@ -9,7 +9,10 @@ import OutletForm from "../../_components/OutletForm"
 type Params = Promise<{ outletId: string }>
 
 const RenderForm = async ({ outletId }: { outletId: string }) => {
-  const [data, branches] = await Promise.all([outletShow(outletId), branchOptions()])
+  const [data, branches] = await Promise.all([
+    outletShow(outletId),
+    branchOptions(),
+  ])
 
   return <OutletForm data={data} branches={branches} />
 }
